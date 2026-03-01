@@ -255,8 +255,9 @@ html, body {
   display: none; position: fixed; inset: 0; z-index: 550;
   background: var(--bg);
   flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 40px 20px; overflow-y: auto;
+  padding: 40px 16px; overflow-y: auto;
 }
+#seasonEndScreen .card, #finalScreen .card { width: 100%; max-width: 380px; }
 #seasonEndScreen.show, #finalScreen.show { display: flex; }
 
 .end-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--accent); letter-spacing: 3px; text-align: center; margin-bottom: 6px; }
@@ -586,7 +587,14 @@ const HEADLINES_IVAN = [
 // ─── HELPER FUNCTIONS ──────────────────────────────────
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function fmt(n) { return "$" + n.toLocaleString("en-US"); }
+function fmt(n) { return "$" + Math.abs(n).toLocaleString("en-US"); }
+function fmtSigned(n) { return (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString("en-US"); }
+
+const NAT_LABELS = {
+  brazil:"Brazil", france:"France", england:"England", spain:"Spain",
+  argentina:"Argentina", germany:"Germany", portugal:"Portugal",
+  nigeria:"Nigeria", japan:"Japan", netherlands:"Netherlands"
+};
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 function getTierClass(rating) {
@@ -610,9 +618,9 @@ function moodEmoji(mood) {
 
 // ─── PLAYER VALUE ──────────────────────────────────────
 function calcValue(player) {
-  const base = Math.pow(player.rating, 2) * 500;
+  const base = Math.pow(player.rating, 2) * 800;
   const ageMult = Math.max(0.3, (33 - player.age) / 15);
-  const potBonus = (player.potentialRating - player.rating) * 20000;
+  const potBonus = (player.potentialRating - player.rating) * 30000;
   let val = Math.round((base * ageMult + potBonus) / 10000) * 10000;
 
   // World event modifiers
@@ -822,9 +830,10 @@ function acceptOffer(offerId) {
   const offer = state.clubOffers.find(o => o.id === offerId);
   if (!offer) return;
 
-  const commission = Math.round(offer.amount * 0.1);
-  state.budget += commission;
-  state.careerEarnings += commission;
+  const agentFee = Math.round(offer.amount * 0.10);
+  const totalIncome = offer.amount;
+  state.budget += totalIncome;
+  state.careerEarnings += totalIncome;
   state.roster = state.roster.filter(p => p.id !== offer.playerId);
   state.clubOffers = state.clubOffers.filter(o => o.playerId !== offer.playerId);
   state.reputation = clamp(state.reputation + (offer.club.tier <= 2 ? 4 : 2), 0, 100);
@@ -835,10 +844,10 @@ function acceptOffer(offerId) {
     playerName: offer.playerName,
     club: offer.club.name,
     amount: offer.amount,
-    commission
+    commission: totalIncome
   });
 
-  showToast("\u{1F4B0} DEAL DONE! +" + fmt(commission) + " commission!", "success");
+  showToast("\u{1F4B0} DEAL DONE! +" + fmt(totalIncome) + " earned!", "success");
   if (offer.amount > 1000000) confettiBurst();
 
   updateTopBar();
@@ -1025,7 +1034,9 @@ function advanceToNextSeason() {
 function updateTopBar() {
   document.getElementById("topAgency").textContent = state.agencyName;
   document.getElementById("topSeason").textContent = "Season " + state.season + "/10";
-  document.getElementById("topBudget").textContent = fmt(state.budget);
+  const budgetEl = document.getElementById("topBudget");
+  budgetEl.textContent = (state.budget < 0 ? "-" : "") + fmt(state.budget);
+  budgetEl.style.color = state.budget < 0 ? "var(--red)" : "var(--green)";
   document.getElementById("topRep").textContent = "\u2B50 " + state.reputation + " REP";
 }
 
@@ -1104,6 +1115,14 @@ function renderHub() {
   if (state.ivan.lastMove) html += '<div style="font-size:12px;color:var(--red);margin-top:4px;">Last: ' + state.ivan.lastMove + '</div>';
   html += '</div>';
 
+  // Budget warning
+  if (state.budget < 0) {
+    html += '<div class="card" style="border-color:var(--red);background:rgba(255,59,92,0.08);">';
+    html += '<div style="color:var(--red);font-weight:700;">\u{1F6A8} BUDGET IN THE RED!</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:4px;">Sell players or cut wages to recover.</div>';
+    html += '</div>';
+  }
+
   // End Season button
   html += '<button class="btn btn-gold btn-pulse" onclick="endSeason()" style="margin-top:8px;">END SEASON \u27A1\uFE0F</button>';
 
@@ -1143,7 +1162,7 @@ function renderPlayerCardScout(p, idx) {
   let html = '<div class="player-card ' + tierClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
   html += '<div class="player-header">';
   html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
-  html += '<div class="player-meta">Age ' + p.age + ' \u00B7 ' + NATIONALITIES.find(n => NAMES[n].flag === p.flag).charAt(0).toUpperCase() + NATIONALITIES.find(n => NAMES[n].flag === p.flag).slice(1) + '</div></div>';
+  html += '<div class="player-meta">Age ' + p.age + ' \u00B7 ' + (NAT_LABELS[p.nationality] || p.nationality) + '</div></div>';
   html += '<div class="player-pos">' + p.position + '</div>';
   html += '</div>';
 
@@ -1258,12 +1277,12 @@ function renderSell() {
   html += '<div class="section-subtitle">' + state.clubOffers.length + ' CLUB' + (state.clubOffers.length > 1 ? 'S' : '') + ' WANT YOUR PLAYERS</div>';
 
   state.clubOffers.forEach(o => {
-    const commission = Math.round(o.amount * 0.1);
+    const agentFee = Math.round(o.amount * 0.10);
     html += '<div class="offer-card">';
     html += '<div class="offer-club">' + o.club.name.toUpperCase() + ' ' + o.club.emoji + ' want</div>';
     html += '<div style="font-size:14px;color:var(--muted);margin:4px 0;">' + o.playerName + ' (' + o.playerPos + ', ' + o.playerRating + ' rated)</div>';
     html += '<div class="offer-amount">' + fmt(o.amount) + '</div>';
-    html += '<div class="offer-commission">Your cut 10%: ' + fmt(commission) + ' \u{1F4B0}</div>';
+    html += '<div class="offer-commission">Agent fee bonus: +' + fmt(agentFee) + ' \u{1F4B0}</div>';
     html += '<div class="offer-expires">\u{1F525} EXPIRES THIS SEASON</div>';
 
     html += '<div class="btn-row">';
