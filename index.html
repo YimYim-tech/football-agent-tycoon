@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Football Agent Tycoon</title>
+<!-- Firebase CDN for multiplayer -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -510,6 +513,76 @@ html, body {
 .match-commentary div { padding: 2px 0; }
 .match-commentary .goal-event { color: var(--green); font-weight: 700; }
 .match-commentary .card-event { color: var(--gold); }
+
+/* ─── MULTIPLAYER ───────────────────────────────── */
+.mode-selector {
+  display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px;
+  margin: 16px 0;
+}
+.mode-btn {
+  min-height: 48px; padding: 14px 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.mode-btn:active { transform: scale(0.98); }
+.mode-btn-mp {
+  border-color: var(--green); background: rgba(0,255,136,0.08);
+}
+.room-code-display {
+  font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 8px;
+  color: var(--accent); text-align: center; padding: 16px;
+  background: var(--surface); border: 2px solid var(--accent);
+  border-radius: 16px; margin: 16px 0; user-select: all; -webkit-user-select: all;
+}
+.room-code-input {
+  width: 100%; max-width: 280px; padding: 14px 16px; border-radius: 12px;
+  background: var(--surface); border: 2px solid var(--border);
+  color: var(--text); font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px; letter-spacing: 6px; text-align: center;
+  outline: none; text-transform: uppercase;
+  -webkit-user-select: text; user-select: text;
+}
+.room-code-input:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+.room-code-input::placeholder { color: var(--muted); font-size: 16px; letter-spacing: 2px; }
+@keyframes waiting-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.waiting-text {
+  color: var(--muted); font-size: 14px; text-align: center;
+  animation: waiting-pulse 2s ease-in-out infinite;
+}
+.opponent-card {
+  background: linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,255,136,0.02));
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;
+}
+.mp-badge {
+  display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 8px;
+  background: rgba(0,255,136,0.2); color: var(--green); font-weight: 700;
+  margin-left: 6px; vertical-align: middle;
+}
+.mp-winner { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+.mp-loser { color: var(--muted); }
+.final-vs {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px;
+  align-items: start; margin: 16px 0;
+}
+.final-vs-col { text-align: center; }
+.final-vs-divider {
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+  color: var(--muted); padding-top: 30px;
+}
+
+/* ─── MULTIPLAYER LOBBY SCREEN ──────────────────── */
+#lobbyScreen {
+  display: none; position: fixed; inset: 0; z-index: 650;
+  background: var(--bg);
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#lobbyScreen.show { display: flex; }
 </style>
 </head>
 <body>
@@ -526,7 +599,9 @@ html, body {
     <button class="diff-btn" data-diff="legend" onclick="selectDifficulty('legend',this)">&#128128; LEGEND &mdash; $1,500,000</button>
   </div>
   <button class="btn btn-continue" id="continueBtn" style="max-width:320px;display:none;" onclick="continueGame()">&#9654;&#65039; CONTINUE</button>
+  <button class="btn btn-continue" id="reconnectBtn" style="max-width:320px;display:none;border-color:var(--green);color:var(--green);" onclick="reconnectMultiplayer()">&#127918; RECONNECT TO MATCH</button>
   <button class="btn btn-primary btn-pulse" style="max-width:320px;" onclick="startGame()">START CAREER</button>
+  <button class="btn btn-outline" style="max-width:320px;margin-top:8px;" onclick="showModeSelector()">&#127918; PLAY ONLINE</button>
 </div>
 
 <!-- TOAST CONTAINER -->
@@ -549,6 +624,9 @@ html, body {
 
 <!-- FINAL SCORE SCREEN -->
 <div id="finalScreen"></div>
+
+<!-- MULTIPLAYER LOBBY -->
+<div id="lobbyScreen"></div>
 
 <!-- OVERLAY + BOTTOM SHEET -->
 <div id="overlay" onclick="closeBottomSheet()"></div>
@@ -609,7 +687,17 @@ const state = {
   dealsThisSeason: false,
   soundMuted: false,
   soldPlayers: [],
-  johnPedroSeen: false
+  johnPedroSeen: false,
+  // Multiplayer
+  gameMode: "solo",        // "solo" | "multiplayer"
+  matchId: null,
+  playerSlot: null,        // 1 or 2
+  playerSecret: null,
+  opponent: {
+    name: "", season: 0, budget: 0, reputation: 0,
+    careerEarnings: 0, rosterCount: 0, rosterTopRating: 0,
+    lastMove: "", finished: false, finalGrade: null, finalEarnings: null
+  }
 };
 
 // ─── PREMIER LEAGUE CLUBS ──────────────────────────────
@@ -781,7 +869,12 @@ function toggleMute() {
 // ─── FIX #3: SAVE/LOAD (localStorage) ──────────────────
 function saveGame() {
   try {
-    localStorage.setItem('fat_save', JSON.stringify(state));
+    if (isMultiplayer()) {
+      localStorage.setItem('fat_mp_state', JSON.stringify(state));
+      syncToFirebase();
+    } else {
+      localStorage.setItem('fat_save', JSON.stringify(state));
+    }
   } catch(e) {}
 }
 
@@ -794,6 +887,8 @@ function loadGame() {
       // Backward compat for new fields
       if (!state.soldPlayers) state.soldPlayers = [];
       if (state.johnPedroSeen === undefined) state.johnPedroSeen = false;
+      if (!state.gameMode) state.gameMode = "solo";
+      if (!state.opponent) state.opponent = { name:"", season:0, budget:0, reputation:0, careerEarnings:0, rosterCount:0, rosterTopRating:0, lastMove:"", finished:false, finalGrade:null, finalEarnings:null };
       return true;
     }
   } catch(e) {}
@@ -1244,8 +1339,12 @@ function endSeason() {
   ageUpRoster();
   updateMoods();
 
-  // Ivan turn
-  ivanTakeTurn();
+  // Rival turn (Ivan in solo, skip in multiplayer)
+  if (!isMultiplayer()) {
+    ivanTakeTurn();
+  } else {
+    syncSeasonSnapshot();
+  }
 
   // Find best deal
   var salesThisSeason = state.seasonLog.filter(function(l) { return l.season === state.season && l.type === "sale"; });
@@ -1269,7 +1368,11 @@ function advanceToNextSeason() {
   state.dealsThisSeason = false;
 
   if (state.season > 10) {
-    showFinalScreen();
+    if (isMultiplayer()) {
+      handleMultiplayerEndGame();
+    } else {
+      showFinalScreen();
+    }
     return;
   }
 
@@ -1286,7 +1389,7 @@ function advanceToNextSeason() {
 
 // ─── UI RENDERING ──────────────────────────────────────
 function updateTopBar() {
-  document.getElementById("topAgency").textContent = state.agencyName;
+  document.getElementById("topAgency").innerHTML = state.agencyName + (isMultiplayer() ? ' <span class="mp-badge">LIVE</span>' : '');
   document.getElementById("topSeason").textContent = "Season " + state.season + "/10";
   var budgetEl = document.getElementById("topBudget");
   budgetEl.textContent = fmt(state.budget);
@@ -1388,15 +1491,8 @@ function renderHub() {
     html += '</div>';
   }
 
-  // Ivan card
-  html += '<div class="ivan-card">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-  html += '<div style="font-weight:700;">\u{1F916} IVAN DRAGO AGENCY</div>';
-  html += '<div style="font-size:12px;color:var(--muted);">\u2B50 ' + state.ivan.reputation + '</div>';
-  html += '</div>';
-  html += '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Budget: ' + fmt(state.ivan.budget) + ' \u00B7 Players: ' + state.ivan.roster.length + '</div>';
-  if (state.ivan.lastMove) html += '<div style="font-size:12px;color:var(--red);margin-top:4px;">Last: ' + state.ivan.lastMove + '</div>';
-  html += '</div>';
+  // Rival card (Ivan or real opponent)
+  html += renderOpponentCard();
 
   // Budget warning
   if (state.budget < 0) {
@@ -2600,6 +2696,570 @@ function finishMatchDay(soldPlayer, opponent, homeScore, awayScore, goals, assis
   saveGame();
 }
 
+// ═══════════════════════════════════════════════════════
+//  MULTIPLAYER SYSTEM (Firebase RTDB)
+// ═══════════════════════════════════════════════════════
+
+// ─── FIREBASE INITIALIZATION ────────────────────────────
+var fbApp = null, fbDb = null, fbListenerRef = null;
+
+function initFirebase() {
+  if (fbApp) return;
+  try {
+    // TODO: Replace with your Firebase project config
+    var firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "000000000000",
+      appId: "YOUR_APP_ID_HERE"
+    };
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database();
+  } catch(e) {
+    console.error("Firebase init failed:", e);
+  }
+}
+
+function isMultiplayer() { return state.gameMode === "multiplayer"; }
+
+function getOpponentDisplayData() {
+  return isMultiplayer() ? state.opponent : state.ivan;
+}
+
+// ─── ROOM CODE ──────────────────────────────────────────
+function generateRoomCode() {
+  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var code = "";
+  for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// ─── MATCH CREATION & JOINING ───────────────────────────
+function createMatch() {
+  initFirebase();
+  if (!fbDb) { showToast("Firebase not configured! Add your config.", "error"); return; }
+
+  var code = generateRoomCode();
+  var secret = Math.random().toString(36).substring(2, 15);
+
+  state.gameMode = "multiplayer";
+  state.matchId = code;
+  state.playerSlot = 1;
+  state.playerSecret = secret;
+
+  var matchData = {
+    createdAt: Date.now(),
+    status: "waiting",
+    difficulty: state.difficulty,
+    players: {
+      player1: {
+        secret: secret,
+        name: document.getElementById("agencyNameInput").value.trim() || "Star Agency",
+        slot: 1,
+        joinedAt: Date.now(),
+        season: 0, budget: 0, reputation: 0, careerEarnings: 0,
+        rosterCount: 0, rosterTopRating: 0, lastMove: "",
+        finished: false, finalGrade: null, finalEarnings: null
+      }
+    }
+  };
+
+  fbDb.ref("matches/" + code).set(matchData).then(function() {
+    saveMpSession();
+    showLobbyWaiting(code);
+    // Listen for player2 to join
+    fbDb.ref("matches/" + code + "/players/player2").on("value", function(snap) {
+      if (snap.exists()) {
+        var p2 = snap.val();
+        state.opponent.name = p2.name;
+        showToast("\u{1F3AE} " + p2.name + " joined the match!", "success");
+        playSound('coin');
+        confettiBurst();
+        // Stop listening for join
+        fbDb.ref("matches/" + code + "/players/player2").off();
+        fbDb.ref("matches/" + code).update({ status: "active" });
+        // Start game
+        setTimeout(function() {
+          hideLobby();
+          startGameMultiplayer();
+        }, 1500);
+      }
+    });
+  }).catch(function(err) {
+    showToast("Failed to create match: " + err.message, "error");
+  });
+}
+
+function joinMatch(code) {
+  initFirebase();
+  if (!fbDb) { showToast("Firebase not configured!", "error"); return; }
+
+  code = code.toUpperCase().trim();
+  if (code.length !== 6) { showToast("Code must be 6 characters!", "error"); return; }
+
+  fbDb.ref("matches/" + code).once("value").then(function(snap) {
+    if (!snap.exists()) { showToast("Match not found!", "error"); return; }
+    var match = snap.val();
+    if (match.status !== "waiting") { showToast("Match already in progress!", "error"); return; }
+    if (match.players && match.players.player2) { showToast("Match is full!", "error"); return; }
+
+    // Check if match is stale (>48 hours)
+    if (Date.now() - match.createdAt > 48 * 60 * 60 * 1000) {
+      showToast("Match expired! Ask your friend to create a new one.", "error");
+      return;
+    }
+
+    var secret = Math.random().toString(36).substring(2, 15);
+    var name = document.getElementById("agencyNameInput").value.trim() || "Star Agency";
+
+    state.gameMode = "multiplayer";
+    state.matchId = code;
+    state.playerSlot = 2;
+    state.playerSecret = secret;
+    state.difficulty = match.difficulty;
+    state.opponent.name = match.players.player1.name;
+
+    var p2Data = {
+      secret: secret,
+      name: name,
+      slot: 2,
+      joinedAt: Date.now(),
+      season: 0, budget: 0, reputation: 0, careerEarnings: 0,
+      rosterCount: 0, rosterTopRating: 0, lastMove: "",
+      finished: false, finalGrade: null, finalEarnings: null
+    };
+
+    fbDb.ref("matches/" + code + "/players/player2").set(p2Data).then(function() {
+      saveMpSession();
+      showToast("\u2705 Joined " + state.opponent.name + "'s match!", "success");
+      playSound('sign');
+      setTimeout(function() {
+        hideLobby();
+        startGameMultiplayer();
+      }, 800);
+    });
+  }).catch(function(err) {
+    showToast("Error joining: " + err.message, "error");
+  });
+}
+
+function startGameMultiplayer() {
+  var nameInput = document.getElementById("agencyNameInput").value.trim();
+  state.agencyName = nameInput || "Star Agency";
+
+  if (state.difficulty === "rookie") state.budget = 5000000;
+  else if (state.difficulty === "pro") state.budget = 3000000;
+  else state.budget = 1500000;
+
+  state.season = 1;
+  state.reputation = 10;
+  state.careerEarnings = 0;
+  state.roster = [];
+  state.seasonLog = [];
+  state.playerIdCounter = 1;
+  state.seasonResultShown = false;
+  state.ivan.roster = []; state.ivan.reputation = 15; state.ivan.careerEarnings = 0; state.ivan.lastMove = "";
+  state.tutorialDismissed = false;
+  state.trainedThisSeason = false;
+  state.dealsThisSeason = false;
+  state.soldPlayers = [];
+  state.johnPedroSeen = false;
+
+  pickWorldEvent();
+  generateScoutPool();
+  generateClubOffers();
+
+  document.getElementById("splashScreen").classList.add("hidden");
+  document.getElementById("app").style.display = "flex";
+  updateTopBar();
+
+  startMultiplayerListeners();
+  syncToFirebase();
+  saveGame();
+
+  showSeasonTransition(1, function() { showTab("hub"); });
+}
+
+// ─── FIREBASE SYNC ──────────────────────────────────────
+function syncToFirebase() {
+  if (!isMultiplayer() || !fbDb || !state.matchId) return;
+
+  var slot = "player" + state.playerSlot;
+  var bestRating = state.roster.length > 0
+    ? state.roster.reduce(function(a, b) { return a.rating > b.rating ? a : b; }).rating
+    : 0;
+
+  var lastSale = state.seasonLog.filter(function(l) { return l.type === "sale"; });
+  var lastMove = lastSale.length > 0
+    ? "Sold " + lastSale[lastSale.length - 1].playerName + " to " + lastSale[lastSale.length - 1].club + " for " + fmt(lastSale[lastSale.length - 1].amount)
+    : state.roster.length > 0 ? "Has " + state.roster.length + " players" : "";
+
+  var data = {
+    secret: state.playerSecret,
+    name: state.agencyName,
+    slot: state.playerSlot,
+    season: state.season,
+    budget: state.budget,
+    reputation: state.reputation,
+    careerEarnings: state.careerEarnings,
+    rosterCount: state.roster.length,
+    rosterTopRating: bestRating,
+    lastMove: lastMove,
+    finished: false,
+    finalGrade: null,
+    finalEarnings: null
+  };
+
+  fbDb.ref("matches/" + state.matchId + "/players/" + slot).update(data).catch(function(e) {
+    console.error("Sync failed:", e);
+  });
+}
+
+function syncSeasonSnapshot() {
+  if (!isMultiplayer() || !fbDb || !state.matchId) return;
+
+  var slot = "player" + state.playerSlot;
+  var salesThisSeason = state.seasonLog.filter(function(l) { return l.season === state.season && l.type === "sale"; });
+  var bestDeal = salesThisSeason.length > 0
+    ? salesThisSeason.reduce(function(a, b) { return a.amount > b.amount ? a : b; })
+    : null;
+
+  var snapshot = {
+    budget: state.budget,
+    reputation: state.reputation,
+    careerEarnings: state.careerEarnings,
+    bestDeal: bestDeal ? bestDeal.playerName + " to " + bestDeal.club + " for " + fmt(bestDeal.amount) : "No deals"
+  };
+
+  fbDb.ref("matches/" + state.matchId + "/players/" + slot + "/seasonSnapshots/" + state.season).set(snapshot);
+}
+
+// ─── FIREBASE LISTENERS ─────────────────────────────────
+function startMultiplayerListeners() {
+  if (!isMultiplayer() || !fbDb || !state.matchId) return;
+
+  var oppSlot = state.playerSlot === 1 ? "player2" : "player1";
+  fbListenerRef = fbDb.ref("matches/" + state.matchId + "/players/" + oppSlot);
+
+  fbListenerRef.on("value", function(snap) {
+    if (!snap.exists()) return;
+    var data = snap.val();
+    var prev = state.opponent;
+
+    state.opponent = {
+      name: data.name || "",
+      season: data.season || 0,
+      budget: data.budget || 0,
+      reputation: data.reputation || 0,
+      careerEarnings: data.careerEarnings || 0,
+      rosterCount: data.rosterCount || 0,
+      rosterTopRating: data.rosterTopRating || 0,
+      lastMove: data.lastMove || "",
+      finished: data.finished || false,
+      finalGrade: data.finalGrade || null,
+      finalEarnings: data.finalEarnings || null
+    };
+
+    // Toast for notable opponent events
+    if (prev.careerEarnings > 0 && data.careerEarnings > prev.careerEarnings) {
+      showToast("\u{1F4E1} " + data.name + " made a deal!", "info");
+    }
+    if (data.finished && !prev.finished) {
+      showToast("\u{1F3C1} " + data.name + " finished their career!", "info");
+      playSound('coin');
+    }
+
+    // Re-render hub if on it
+    if (state.currentTab === "hub") renderCurrentTab();
+  });
+}
+
+function stopMultiplayerListeners() {
+  if (fbListenerRef) { fbListenerRef.off(); fbListenerRef = null; }
+}
+
+// ─── MP SESSION PERSISTENCE ─────────────────────────────
+function saveMpSession() {
+  try {
+    localStorage.setItem("fat_mp_session", JSON.stringify({
+      matchId: state.matchId,
+      playerSlot: state.playerSlot,
+      playerSecret: state.playerSecret
+    }));
+  } catch(e) {}
+}
+
+function loadMpSession() {
+  try {
+    var s = localStorage.getItem("fat_mp_session");
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+
+function deleteMpSession() {
+  localStorage.removeItem("fat_mp_session");
+  localStorage.removeItem("fat_mp_state");
+}
+
+function reconnectMultiplayer() {
+  var session = loadMpSession();
+  if (!session) { showToast("No match to reconnect to.", "error"); return; }
+
+  initFirebase();
+  if (!fbDb) { showToast("Firebase not configured!", "error"); return; }
+
+  state.matchId = session.matchId;
+  state.playerSlot = session.playerSlot;
+  state.playerSecret = session.playerSecret;
+  state.gameMode = "multiplayer";
+
+  // Load local state
+  var savedState = localStorage.getItem("fat_mp_state");
+  if (savedState) {
+    var parsed = JSON.parse(savedState);
+    Object.assign(state, parsed);
+    if (!state.soldPlayers) state.soldPlayers = [];
+  }
+
+  document.getElementById("splashScreen").classList.add("hidden");
+  document.getElementById("app").style.display = "flex";
+  updateTopBar();
+  startMultiplayerListeners();
+  showTab(state.currentTab || "hub");
+}
+
+// ─── MULTIPLAYER END GAME ───────────────────────────────
+function handleMultiplayerEndGame() {
+  // Write final data to Firebase
+  var allSales = state.seasonLog.filter(function(l) { return l.type === "sale"; });
+  var grade;
+  if (state.careerEarnings > 50000000) grade = "S+";
+  else if (state.careerEarnings > 35000000) grade = "S";
+  else if (state.careerEarnings > 25000000) grade = "A";
+  else if (state.careerEarnings > 15000000) grade = "B";
+  else if (state.careerEarnings > 8000000) grade = "C";
+  else grade = "D";
+
+  var slot = "player" + state.playerSlot;
+  fbDb.ref("matches/" + state.matchId + "/players/" + slot).update({
+    finished: true,
+    finalGrade: grade,
+    finalEarnings: state.careerEarnings
+  });
+
+  if (state.opponent.finished) {
+    showFinalScreenMultiplayer(grade);
+  } else {
+    showWaitingForOpponent(grade);
+  }
+}
+
+function showWaitingForOpponent(myGrade) {
+  var screen = document.getElementById("finalScreen");
+  var html = '';
+  html += '<div style="font-size:14px;color:var(--muted);letter-spacing:4px;margin-bottom:4px;">CAREER COMPLETE</div>';
+  html += '<div style="width:80px;height:2px;background:var(--accent);margin:8px auto 24px;"></div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:36px;color:var(--accent);">YOUR GRADE: ' + myGrade + '</div>';
+  html += '<div style="font-size:18px;color:var(--green);margin:8px 0 32px;">' + fmt(state.careerEarnings) + ' Career Earnings</div>';
+  html += '<div class="waiting-text" style="font-size:18px;">\u23F3 Waiting for ' + (state.opponent.name || 'opponent') + ' to finish...</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin-top:12px;">They are on Season ' + (state.opponent.season || '?') + '</div>';
+  screen.innerHTML = html;
+  screen.classList.add("show");
+
+  // Listen for opponent to finish
+  var oppSlot = state.playerSlot === 1 ? "player2" : "player1";
+  fbDb.ref("matches/" + state.matchId + "/players/" + oppSlot + "/finished").on("value", function(snap) {
+    if (snap.val() === true) {
+      fbDb.ref("matches/" + state.matchId + "/players/" + oppSlot + "/finished").off();
+      // Refresh opponent data then show comparison
+      fbDb.ref("matches/" + state.matchId + "/players/" + oppSlot).once("value").then(function(oppSnap) {
+        var d = oppSnap.val();
+        state.opponent.finalGrade = d.finalGrade;
+        state.opponent.finalEarnings = d.finalEarnings;
+        state.opponent.careerEarnings = d.careerEarnings;
+        state.opponent.finished = true;
+        showFinalScreenMultiplayer(myGrade);
+      });
+    }
+  });
+}
+
+function showFinalScreenMultiplayer(myGrade) {
+  var screen = document.getElementById("finalScreen");
+  var oppGrade = state.opponent.finalGrade || "?";
+  var oppEarnings = state.opponent.finalEarnings || state.opponent.careerEarnings || 0;
+  var myEarnings = state.careerEarnings;
+
+  var iWin = myEarnings > oppEarnings;
+  var tie = myEarnings === oppEarnings;
+  var winner = tie ? (state.reputation > (state.opponent.reputation || 0) ? "me" : "opp") : (iWin ? "me" : "opp");
+  if (tie && state.reputation === (state.opponent.reputation || 0)) winner = "tie";
+
+  var allSales = state.seasonLog.filter(function(l) { return l.type === "sale"; });
+
+  var html = '';
+  html += '<div style="font-size:14px;color:var(--muted);letter-spacing:4px;margin-bottom:4px;">MATCH COMPLETE</div>';
+  html += '<div style="width:80px;height:2px;background:var(--accent);margin:8px auto 16px;"></div>';
+
+  // Winner banner
+  if (winner === "me") {
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;" class="mp-winner">\u{1F3C6} YOU WIN!</div>';
+  } else if (winner === "opp") {
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;" class="mp-loser">\u{1F625} YOU LOSE</div>';
+  } else {
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:var(--accent);">\u{1F91D} TIE!</div>';
+  }
+
+  // Side by side comparison
+  html += '<div class="final-vs" style="width:100%;max-width:380px;">';
+
+  // My column
+  html += '<div class="final-vs-col">';
+  html += '<div style="font-size:12px;color:var(--muted);">YOU</div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);">' + state.agencyName + '</div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;' + (winner === "me" ? 'color:var(--gold);' : '') + '">' + myGrade + '</div>';
+  html += '<div class="money" style="font-size:16px;">' + fmt(myEarnings) + '</div>';
+  html += '<div style="font-size:12px;color:var(--muted);">' + allSales.length + ' deals</div>';
+  html += '<div style="font-size:12px;color:var(--gold);">\u2B50 ' + state.reputation + '</div>';
+  html += '</div>';
+
+  // VS divider
+  html += '<div class="final-vs-divider">VS</div>';
+
+  // Opponent column
+  html += '<div class="final-vs-col">';
+  html += '<div style="font-size:12px;color:var(--muted);">RIVAL</div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--green);">' + (state.opponent.name || 'Opponent') + '</div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;' + (winner === "opp" ? 'color:var(--gold);' : '') + '">' + oppGrade + '</div>';
+  html += '<div class="money" style="font-size:16px;">' + fmt(oppEarnings) + '</div>';
+  html += '<div style="font-size:12px;color:var(--muted);">--</div>';
+  html += '<div style="font-size:12px;color:var(--gold);">\u2B50 ' + (state.opponent.reputation || 0) + '</div>';
+  html += '</div>';
+
+  html += '</div>'; // end final-vs
+
+  html += '<button class="btn btn-primary" style="margin-top:20px;max-width:350px;" onclick="resetGameMultiplayer()">\u{1F504} PLAY AGAIN</button>';
+
+  screen.innerHTML = html;
+  screen.classList.add("show");
+  confettiBurst();
+  if (winner === "me") playSound('sell');
+
+  // Mark match finished
+  fbDb.ref("matches/" + state.matchId).update({ status: "finished" });
+  deleteMpSession();
+}
+
+function resetGameMultiplayer() {
+  stopMultiplayerListeners();
+  state.gameMode = "solo";
+  state.matchId = null;
+  state.playerSlot = null;
+  state.playerSecret = null;
+  state.opponent = { name:"", season:0, budget:0, reputation:0, careerEarnings:0, rosterCount:0, rosterTopRating:0, lastMove:"", finished:false, finalGrade:null, finalEarnings:null };
+  deleteMpSession();
+  resetGame();
+}
+
+// ─── LOBBY UI ───────────────────────────────────────────
+function showLobbyScreen(content) {
+  var lobby = document.getElementById("lobbyScreen");
+  lobby.innerHTML = content;
+  lobby.classList.add("show");
+}
+
+function hideLobby() {
+  document.getElementById("lobbyScreen").classList.remove("show");
+}
+
+function showModeSelector() {
+  var html = '';
+  html += '<div style="font-size:64px;margin-bottom:12px;">\u26BD</div>';
+  html += '<div class="splash-title" style="font-size:28px;">CHOOSE MODE</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin:12px 0 24px;text-align:center;">Play solo against AI or compete online with a friend</div>';
+
+  html += '<div class="mode-selector">';
+  html += '<button class="mode-btn" onclick="hideLobby();startGame()">\u{1F916} SOLO CAREER <span style="font-size:12px;color:var(--muted);font-weight:400;">vs Ivan</span></button>';
+  html += '<button class="mode-btn mode-btn-mp" onclick="createMatch()">\u{1F3AE} CREATE MATCH <span style="font-size:12px;color:var(--green);font-weight:400;">get code</span></button>';
+  html += '<button class="mode-btn mode-btn-mp" onclick="showJoinUI()">\u{1F517} JOIN MATCH <span style="font-size:12px;color:var(--green);font-weight:400;">enter code</span></button>';
+  html += '</div>';
+
+  html += '<button class="btn btn-outline" style="max-width:320px;margin-top:8px;" onclick="hideLobby()">\u2190 BACK</button>';
+
+  showLobbyScreen(html);
+}
+
+function showLobbyWaiting(code) {
+  var html = '';
+  html += '<div style="font-size:48px;margin-bottom:12px;">\u{1F3AE}</div>';
+  html += '<div class="splash-title" style="font-size:24px;">WAITING FOR OPPONENT</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin:8px 0 16px;">Share this code with your friend:</div>';
+  html += '<div class="room-code-display">' + code + '</div>';
+  html += '<button class="btn btn-primary" style="max-width:280px;margin-bottom:12px;" onclick="navigator.clipboard.writeText(\'' + code + '\');showToast(\'Code copied!\',\'success\')">\u{1F4CB} COPY CODE</button>';
+  html += '<div class="waiting-text">\u23F3 Waiting for opponent to join...</div>';
+  html += '<button class="btn btn-outline" style="max-width:280px;margin-top:24px;" onclick="cancelMatchCreation()">\u274C CANCEL</button>';
+
+  showLobbyScreen(html);
+}
+
+function showJoinUI() {
+  var html = '';
+  html += '<div style="font-size:48px;margin-bottom:12px;">\u{1F517}</div>';
+  html += '<div class="splash-title" style="font-size:24px;">JOIN MATCH</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin:8px 0 16px;">Enter the 6-character room code:</div>';
+  html += '<input class="room-code-input" id="roomCodeInput" type="text" placeholder="ABC123" maxlength="6" autocomplete="off">';
+  html += '<button class="btn btn-green" style="max-width:280px;margin-top:16px;" onclick="joinMatch(document.getElementById(\'roomCodeInput\').value)">\u2705 JOIN</button>';
+  html += '<button class="btn btn-outline" style="max-width:280px;margin-top:8px;" onclick="showModeSelector()">\u2190 BACK</button>';
+
+  showLobbyScreen(html);
+}
+
+function cancelMatchCreation() {
+  if (state.matchId && fbDb) {
+    fbDb.ref("matches/" + state.matchId + "/players/player2").off();
+    fbDb.ref("matches/" + state.matchId).remove();
+  }
+  state.gameMode = "solo";
+  state.matchId = null;
+  deleteMpSession();
+  hideLobby();
+}
+
+// ─── OPPONENT CARD (replaces Ivan in Hub) ───────────────
+function renderOpponentCard() {
+  var opp = getOpponentDisplayData();
+
+  if (isMultiplayer()) {
+    var html = '<div class="opponent-card">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+    html += '<div style="font-weight:700;">\u{1F3AE} ' + (opp.name || 'Opponent') + ' <span class="mp-badge">LIVE</span></div>';
+    html += '<div style="font-size:12px;color:var(--gold);">\u2B50 ' + (opp.reputation || 0) + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:6px;">';
+    html += 'Season ' + (opp.season || '?') + ' \u00B7 Budget: ' + fmt(opp.budget || 0) + ' \u00B7 Players: ' + (opp.rosterCount || 0);
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--green);margin-top:4px;">Earnings: ' + fmt(opp.careerEarnings || 0) + '</div>';
+    if (opp.lastMove) html += '<div style="font-size:12px;color:var(--accent);margin-top:4px;">' + opp.lastMove + '</div>';
+    if (opp.finished) html += '<div style="font-size:12px;color:var(--gold);margin-top:4px;font-weight:700;">\u{1F3C1} Finished career! Grade: ' + (opp.finalGrade || '?') + '</div>';
+    html += '</div>';
+    return html;
+  } else {
+    // Ivan card (original)
+    var html = '<div class="ivan-card">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+    html += '<div style="font-weight:700;">\u{1F916} IVAN DRAGO AGENCY</div>';
+    html += '<div style="font-size:12px;color:var(--muted);">\u2B50 ' + state.ivan.reputation + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Budget: ' + fmt(state.ivan.budget) + ' \u00B7 Players: ' + state.ivan.roster.length + '</div>';
+    if (state.ivan.lastMove) html += '<div style="font-size:12px;color:var(--red);margin-top:4px;">Last: ' + state.ivan.lastMove + '</div>';
+    html += '</div>';
+    return html;
+  }
+}
+
 // ─── GAME INIT ─────────────────────────────────────────
 function selectDifficulty(diff, el) {
   document.querySelectorAll(".diff-btn").forEach(function(b) { b.classList.remove("selected"); });
@@ -2663,6 +3323,12 @@ function continueGame() {
 }
 
 function resetGame() {
+  stopMultiplayerListeners();
+  state.gameMode = "solo";
+  state.matchId = null;
+  state.playerSlot = null;
+  state.playerSecret = null;
+  state.opponent = { name:"", season:0, budget:0, reputation:0, careerEarnings:0, rosterCount:0, rosterTopRating:0, lastMove:"", finished:false, finalGrade:null, finalEarnings:null };
   document.getElementById("finalScreen").classList.remove("show");
   document.getElementById("seasonEndScreen").classList.remove("show");
   document.getElementById("app").style.display = "none";
@@ -2692,6 +3358,12 @@ function checkContinueButton() {
     btn.style.display = "block";
   } else {
     btn.style.display = "none";
+  }
+  // Check for multiplayer reconnect
+  var rcBtn = document.getElementById("reconnectBtn");
+  if (rcBtn) {
+    var mpSession = loadMpSession();
+    rcBtn.style.display = mpSession ? "block" : "none";
   }
 }
 
