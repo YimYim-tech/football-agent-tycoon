@@ -440,6 +440,76 @@ html, body {
   background: transparent; border: 1px solid var(--accent); color: var(--accent);
   margin-bottom: 12px;
 }
+
+/* ─── SPECIAL PLAYER CARD (John Pedro) ──────────── */
+.card-special {
+  border: 2px solid var(--gold) !important;
+  border-left: 4px solid var(--gold) !important;
+  background: linear-gradient(135deg, rgba(255,215,0,0.08), var(--surface)) !important;
+  box-shadow: 0 0 20px rgba(255,215,0,0.15);
+  position: relative;
+  overflow: hidden;
+}
+.card-special::before {
+  content: '\1F48E';
+  position: absolute; top: 8px; right: 8px; font-size: 20px;
+  animation: sparkle 2s ease-in-out infinite;
+}
+@keyframes sparkle {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.special-story {
+  background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02));
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 12px; padding: 10px 14px; margin-top: 8px;
+  font-size: 13px; color: var(--gold); font-style: italic; line-height: 1.5;
+}
+
+/* ─── TRAINING CANVAS ───────────────────────────── */
+.mini-game-container canvas {
+  width: 100%; border-radius: 12px;
+  touch-action: none; display: block; margin-bottom: 12px;
+}
+.mini-game-hud {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px; font-size: 14px; font-weight: 600;
+}
+.mini-game-timer {
+  height: 6px; background: var(--surface2); border-radius: 3px;
+  overflow: hidden; margin-bottom: 12px;
+}
+.mini-game-timer-fill {
+  height: 100%; background: var(--accent); border-radius: 3px;
+  transition: width 0.1s linear;
+}
+.mini-game-result {
+  text-align: center; padding: 20px;
+}
+.mini-game-result .score-big {
+  font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: var(--accent);
+}
+
+/* ─── MATCH DAY ─────────────────────────────────── */
+.match-card {
+  background: linear-gradient(135deg, rgba(0,255,136,0.06), var(--surface));
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer; transition: transform 0.2s;
+}
+.match-card:active { transform: scale(0.98); }
+.match-scoreboard {
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+  text-align: center; padding: 8px; margin-bottom: 8px;
+}
+.match-commentary {
+  max-height: 120px; overflow-y: auto; padding: 8px;
+  background: rgba(0,0,0,0.3); border-radius: 8px;
+  font-size: 12px; line-height: 1.6; color: var(--muted);
+}
+.match-commentary div { padding: 2px 0; }
+.match-commentary .goal-event { color: var(--green); font-weight: 700; }
+.match-commentary .card-event { color: var(--gold); }
 </style>
 </head>
 <body>
@@ -537,7 +607,9 @@ const state = {
   tutorialDismissed: false,
   trainedThisSeason: false,
   dealsThisSeason: false,
-  soundMuted: false
+  soundMuted: false,
+  soldPlayers: [],
+  johnPedroSeen: false
 };
 
 // ─── PREMIER LEAGUE CLUBS ──────────────────────────────
@@ -719,6 +791,9 @@ function loadGame() {
     if (s) {
       var parsed = JSON.parse(s);
       Object.assign(state, parsed);
+      // Backward compat for new fields
+      if (!state.soldPlayers) state.soldPlayers = [];
+      if (state.johnPedroSeen === undefined) state.johnPedroSeen = false;
       return true;
     }
   } catch(e) {}
@@ -787,6 +862,30 @@ function generatePlayer(ageMin, ageMax, ratingMin, ratingMax) {
   };
 }
 
+// ─── JOHN PEDRO — SPECIAL PLAYER ────────────────────────
+function createJohnPedro() {
+  return {
+    id: state.playerIdCounter++,
+    firstName: "John",
+    lastName: "Pedro",
+    nationality: "germany",
+    flag: NAMES.germany.flag,
+    age: 16,
+    rating: 62,
+    potentialRating: 95,
+    potentialStars: 5,
+    position: "FWD",
+    trait: { name: "Prodigy", emoji: "\u{1F31F}", desc: "Generational talent" },
+    signingFee: 250000,
+    mood: "happy",
+    seasonsNotTrained: 0,
+    injured: false,
+    seasonsSigned: 0,
+    special: true,
+    story: "A 16-year-old German prodigy discovered playing street football in Berlin. Scouts say he has the vision of \u00D6zil and the finishing of M\u00FCller. This could be a once-in-a-generation talent."
+  };
+}
+
 function generateScoutPool() {
   state.availablePlayers = [];
   var rMin = 40, rMax = 62;
@@ -797,6 +896,15 @@ function generateScoutPool() {
 
   for (var i = 0; i < 5; i++) {
     state.availablePlayers.push(generatePlayer(16, 24, rMin, rMax));
+  }
+
+  // Inject John Pedro in Season 1
+  if (state.season === 1 && !state.johnPedroSeen) {
+    var jpAlreadySigned = state.roster.some(function(p) { return p.special; });
+    if (!jpAlreadySigned) {
+      state.availablePlayers.unshift(createJohnPedro());
+      state.johnPedroSeen = true;
+    }
   }
 }
 
@@ -974,6 +1082,14 @@ function acceptOffer(offerId) {
     commission: totalIncome
   });
 
+  // Track sold player for Match Day
+  state.soldPlayers.push({
+    name: offer.playerName,
+    club: offer.club.name,
+    rating: offer.playerRating,
+    season: state.season
+  });
+
   showToast("\u{1F4B0} DEAL DONE! +" + fmt(totalIncome) + " earned!", "success");
   playSound('sell');
   if (offer.amount > 1000000) { confettiBurst(); playSound('coin'); }
@@ -1050,8 +1166,8 @@ function ivanTakeTurn() {
   state.ivan.lastMove = "";
   var actions = [];
 
-  // 1. Try to sign high-potential available player
-  var goodPick = state.availablePlayers.find(function(p) { return p.potentialStars >= 4 && p.signingFee < 600000; });
+  // 1. Try to sign high-potential available player (never takes John Pedro)
+  var goodPick = state.availablePlayers.find(function(p) { return p.potentialStars >= 4 && p.signingFee < 600000 && !p.special; });
   if (goodPick && state.ivan.budget >= goodPick.signingFee) {
     state.ivan.budget -= goodPick.signingFee;
     state.ivan.roster.push(Object.assign({}, goodPick));
@@ -1290,6 +1406,22 @@ function renderHub() {
     html += '</div>';
   }
 
+  // Match Day section
+  if (state.soldPlayers.length > 0) {
+    html += '<div class="card">';
+    html += '<div class="section-title">\u26BD MATCH DAY</div>';
+    html += '<div class="section-subtitle">Watch your sold players in action!</div>';
+    state.soldPlayers.forEach(function(sp, idx) {
+      html += '<div class="match-card" onclick="startMatchDay(' + idx + ')">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div><div style="font-weight:700;">' + sp.name + '</div>';
+      html += '<div style="font-size:12px;color:var(--muted);">' + sp.club + ' \u00B7 ' + sp.rating + ' rated</div></div>';
+      html += '<div style="font-size:12px;color:var(--green);">WATCH \u25B6</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+
   // End Season button
   html += '<button class="btn btn-gold btn-pulse" onclick="endSeason()" style="margin-top:8px;">END SEASON \u27A1\uFE0F</button>';
 
@@ -1333,9 +1465,12 @@ function renderScout() {
 
 function renderPlayerCardScout(p, idx) {
   var tierClass = getTierClass(p.rating);
-  var html = '<div class="player-card ' + tierClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
+  var specialClass = p.special ? ' card-special' : '';
+  var html = '<div class="player-card ' + tierClass + specialClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
   html += '<div class="player-header">';
-  html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
+  html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName;
+  if (p.special) html += ' <span style="color:var(--gold);font-size:12px;">\u{1F48E} SPECIAL</span>';
+  html += '</div>';
   html += '<div class="player-meta">Age ' + p.age + ' \u00B7 ' + (NAT_LABELS[p.nationality] || p.nationality) + '</div></div>';
   html += '<div class="player-pos">' + p.position + '</div>';
   html += '</div>';
@@ -1355,10 +1490,15 @@ function renderPlayerCardScout(p, idx) {
     html += '<div class="trait-badge">' + p.trait.emoji + ' ' + p.trait.name + '</div>';
   }
 
+  // Special player story
+  if (p.special && p.story) {
+    html += '<div class="special-story">\u{1F4D6} ' + p.story + '</div>';
+  }
+
   html += '<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">';
   html += '<div style="font-size:14px;">Signing Fee: <span class="money">' + fmt(p.signingFee) + '</span></div>';
   html += '</div>';
-  html += '<button class="btn btn-green" style="margin-top:8px;" onclick="signPlayer(state.availablePlayers.find(function(x){return x.id===' + p.id + '}));renderCurrentTab();">SIGN HIM</button>';
+  html += '<button class="btn ' + (p.special ? 'btn-gold' : 'btn-green') + '" style="margin-top:8px;" onclick="signPlayer(state.availablePlayers.find(function(x){return x.id===' + p.id + '}));renderCurrentTab();">' + (p.special ? '\u{1F48E} SIGN THIS PRODIGY' : 'SIGN HIM') + '</button>';
   html += '</div>';
   return html;
 }
@@ -1421,22 +1561,22 @@ function openTrainSheet(playerId) {
   if (p.injured) {
     html += '<div style="text-align:center;padding:20px;color:var(--red);">\u{1FA79} Player is injured! Will recover next season.</div>';
   } else {
-    html += '<div class="card" style="cursor:pointer;" onclick="trainPlayer(' + p.id + ',\'basic\')">';
+    html += '<div class="card" style="cursor:pointer;" onclick="launchMiniGame(' + p.id + ',\'shooting\')">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-    html += '<div><div style="font-weight:700;">\u{1F3C3} Basic Drills</div><div style="font-size:12px;color:var(--muted);">+1 to +3 rating</div></div>';
+    html += '<div><div style="font-weight:700;">\u{1F3AF} Shooting Practice</div><div style="font-size:12px;color:var(--muted);">Tap to shoot! Score goals for rating boost</div></div>';
     html += '<div style="text-align:right;"><div class="money">' + fmt(100000) + '</div></div>';
     html += '</div></div>';
 
-    html += '<div class="card" style="cursor:pointer;" onclick="trainPlayer(' + p.id + ',\'intensive\')">';
+    html += '<div class="card" style="cursor:pointer;" onclick="launchMiniGame(' + p.id + ',\'passing\')">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-    html += '<div><div style="font-weight:700;">\u26A1 Intensive Camp</div><div style="font-size:12px;color:var(--muted);">+3 to +7 rating \u26A0\uFE0F injury risk</div></div>';
-    html += '<div style="text-align:right;"><div class="money">' + fmt(300000) + '</div></div>';
+    html += '<div><div style="font-weight:700;">\u26BD Passing Drill</div><div style="font-size:12px;color:var(--muted);">Tap targets! Speed increases over time</div></div>';
+    html += '<div style="text-align:right;"><div class="money">' + fmt(200000) + '</div></div>';
     html += '</div></div>';
 
-    html += '<div class="card" style="cursor:pointer;" onclick="trainPlayer(' + p.id + ',\'loan\')">';
+    html += '<div class="card" style="cursor:pointer;" onclick="launchMiniGame(' + p.id + ',\'dribble\')">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-    html += '<div><div style="font-weight:700;">\u{1F30D} Loan to Club</div><div style="font-size:12px;color:var(--muted);">+2 to +8 rating \u26A0\uFE0F\u26A0\uFE0F injury risk</div></div>';
-    html += '<div style="text-align:right;"><div style="color:var(--green);font-weight:700;">FREE</div></div>';
+    html += '<div><div style="font-weight:700;">\u{1F3C3} Dribble Run</div><div style="font-size:12px;color:var(--muted);">Dodge cones! Best boost potential</div></div>';
+    html += '<div style="text-align:right;"><div class="money">' + fmt(300000) + '</div></div>';
     html += '</div></div>';
   }
 
@@ -1746,6 +1886,720 @@ function showFinalScreen() {
   deleteSave();
 }
 
+// ─── SHARED CANVAS UTILITIES ────────────────────────────
+function drawPitch(ctx, w, h) {
+  // Green pitch
+  ctx.fillStyle = '#2d8b2d';
+  ctx.fillRect(0, 0, w, h);
+  // Darker stripes
+  for (var i = 0; i < h; i += 40) {
+    ctx.fillStyle = i % 80 === 0 ? '#2d8b2d' : '#278527';
+    ctx.fillRect(0, i, w, 40);
+  }
+  // White lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(10, 10, w - 20, h - 20);
+  // Center line
+  ctx.beginPath();
+  ctx.moveTo(10, h / 2);
+  ctx.lineTo(w - 10, h / 2);
+  ctx.stroke();
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, 40, 0, Math.PI * 2);
+  ctx.stroke();
+  // Goal areas
+  ctx.strokeRect(w / 2 - 60, 10, 120, 40);
+  ctx.strokeRect(w / 2 - 60, h - 50, 120, 40);
+}
+
+function getCanvasXY(e, canvas) {
+  var rect = canvas.getBoundingClientRect();
+  var touch = e.touches ? e.touches[0] : e;
+  return {
+    x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+    y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+// ─── TRAINING MINI-GAMES ────────────────────────────────
+var activeGame = null;
+
+function launchMiniGame(playerId, gameType) {
+  var player = state.roster.find(function(p) { return p.id === playerId; });
+  if (!player) return;
+
+  var costs = { shooting: 100000, passing: 200000, dribble: 300000 };
+  var cost = costs[gameType] || 100000;
+  if (state.budget < cost) {
+    showToast("Not enough budget! Need " + fmt(cost), "error");
+    playSound('error');
+    return;
+  }
+  state.budget -= cost;
+  updateTopBar();
+
+  var html = '<div class="mini-game-container">';
+  html += '<div class="sheet-title">' + gameType.toUpperCase() + ' TRAINING</div>';
+  html += '<div class="mini-game-hud"><span id="mgScore">Score: 0</span><span id="mgTimer">Time: --</span></div>';
+  html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="mgTimerBar" style="width:100%"></div></div>';
+  html += '<canvas id="trainCanvas" width="340" height="400"></canvas>';
+  html += '</div>';
+
+  openBottomSheet(html);
+
+  setTimeout(function() {
+    var canvas = document.getElementById('trainCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    if (gameType === 'shooting') miniGameShooting(canvas, ctx, player);
+    else if (gameType === 'passing') miniGamePassing(canvas, ctx, player);
+    else if (gameType === 'dribble') miniGameDribble(canvas, ctx, player);
+  }, 100);
+}
+
+function applyTrainingResult(player, score, maxScore) {
+  var pct = maxScore > 0 ? (score / maxScore) : 0;
+  var gain = 0;
+  if (pct > 0.8) gain = rand(3, 5);
+  else if (pct > 0.5) gain = rand(2, 3);
+  else if (pct > 0.2) gain = 1;
+
+  // Mood modifier
+  if (player.mood === "unhappy") gain = Math.max(0, gain - 1);
+
+  var oldRating = player.rating;
+  player.rating = clamp(player.rating + gain, 0, player.potentialRating);
+  player.seasonsNotTrained = 0;
+  state.trainedThisSeason = true;
+  if (player.mood === "unhappy") player.mood = "neutral";
+  else if (player.mood === "neutral") player.mood = "happy";
+
+  var resultHTML = '<div class="mini-game-result">';
+  resultHTML += '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">TRAINING COMPLETE</div>';
+  resultHTML += '<div class="score-big">' + Math.round(pct * 100) + '%</div>';
+  resultHTML += '<div style="font-size:16px;margin:8px 0;">' + player.firstName + ' ' + player.lastName + '</div>';
+  if (gain > 0) {
+    resultHTML += '<div style="font-size:24px;color:var(--green);font-weight:700;">+' + (player.rating - oldRating) + ' RATING!</div>';
+    resultHTML += '<div style="font-size:14px;color:var(--muted);">' + oldRating + ' \u2192 ' + player.rating + '</div>';
+  } else {
+    resultHTML += '<div style="font-size:16px;color:var(--muted);">No improvement this time</div>';
+  }
+  resultHTML += '<button class="btn btn-primary" style="margin-top:16px;" onclick="closeBottomSheet();renderCurrentTab();">DONE</button>';
+  resultHTML += '</div>';
+
+  document.getElementById('sheetContent').innerHTML = resultHTML;
+
+  if (gain > 0) {
+    showToast("\u{1F4AA} " + player.firstName + " +" + (player.rating - oldRating) + " rating!", "success");
+    playSound('train');
+  } else {
+    showToast("Training done, no improvement.", "info");
+    playSound('train');
+  }
+
+  saveGame();
+}
+
+// ─── MINI-GAME: SHOOTING PRACTICE ──────────────────────
+function miniGameShooting(canvas, ctx, player) {
+  var w = canvas.width, h = canvas.height;
+  var round = 0, maxRounds = 5, goals = 0;
+  var phase = 'power'; // 'power', 'aim', 'animating', 'done'
+  var power = 0, powerDir = 1, aimX = w / 2;
+  var ballX = w / 2, ballY = h - 60, ballTargetX, ballTargetY;
+  var animFrame = 0;
+  var goalZones = [
+    { x: w / 2 - 55, y: 25, w: 35, h: 30, label: 'L' },
+    { x: w / 2 - 15, y: 25, w: 30, h: 30, label: 'C' },
+    { x: w / 2 + 20, y: 25, w: 35, h: 30, label: 'R' }
+  ];
+
+  function draw() {
+    drawPitch(ctx, w, h);
+    // Goal
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(w / 2 - 60, 10, 120, 40);
+    // Goal zones
+    goalZones.forEach(function(z) {
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(z.x, z.y, z.w, z.h);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '12px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.fillText(z.label, z.x + z.w / 2, z.y + z.h / 2 + 4);
+    });
+    // Ball
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Power meter
+    if (phase === 'power') {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(20, h - 30, w - 40, 16);
+      var pW = (w - 44) * (power / 100);
+      var pColor = power > 70 ? '#00ff88' : power > 40 ? '#ffd700' : '#ff3b5c';
+      ctx.fillStyle = pColor;
+      ctx.fillRect(22, h - 28, pW, 12);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP TO SET POWER', w / 2, h - 17);
+    }
+    // Aim marker
+    if (phase === 'aim') {
+      ctx.beginPath();
+      ctx.arc(aimX, 35, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'var(--accent)';
+      ctx.fillStyle = '#00d4ff';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP GOAL ZONE', w / 2, h - 17);
+    }
+    // Score display
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px Bebas Neue, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Round ' + (round + 1) + '/' + maxRounds, 16, h - 42);
+    ctx.textAlign = 'right';
+    ctx.fillText('Goals: ' + goals, w - 16, h - 42);
+  }
+
+  function update() {
+    if (phase === 'power') {
+      power += powerDir * 2.5;
+      if (power >= 100) { power = 100; powerDir = -1; }
+      if (power <= 0) { power = 0; powerDir = 1; }
+    }
+    if (phase === 'aim') {
+      aimX += powerDir * 3;
+      if (aimX > w / 2 + 55) powerDir = -1;
+      if (aimX < w / 2 - 55) powerDir = 1;
+    }
+    if (phase === 'animating') {
+      animFrame++;
+      ballX += (ballTargetX - w / 2) / 15;
+      ballY += (ballTargetY - (h - 60)) / 15;
+      if (animFrame > 15) {
+        // Check if goal
+        var isGoal = power > 35 && ballTargetY < 50;
+        if (isGoal) goals++;
+        round++;
+        if (round >= maxRounds) {
+          phase = 'done';
+          document.getElementById('mgScore').textContent = 'Goals: ' + goals + '/' + maxRounds;
+          setTimeout(function() { applyTrainingResult(player, goals, maxRounds); }, 500);
+          return;
+        }
+        // Reset
+        ballX = w / 2; ballY = h - 60;
+        phase = 'power'; power = 0; powerDir = 1;
+        animFrame = 0;
+      }
+    }
+
+    draw();
+    document.getElementById('mgScore').textContent = 'Goals: ' + goals;
+    if (phase !== 'done') activeGame = requestAnimationFrame(update);
+  }
+
+  function onTap(e) {
+    e.preventDefault();
+    if (phase === 'power') {
+      phase = 'aim';
+      aimX = w / 2 - 55;
+      powerDir = 1;
+    } else if (phase === 'aim') {
+      var pt = getCanvasXY(e, canvas);
+      ballTargetX = pt.x;
+      ballTargetY = power > 35 ? 35 : h / 2;
+      phase = 'animating';
+      animFrame = 0;
+    }
+  }
+
+  canvas.addEventListener('touchstart', onTap, { passive: false });
+  canvas.addEventListener('click', onTap);
+  activeGame = requestAnimationFrame(update);
+}
+
+// ─── MINI-GAME: PASSING DRILL ──────────────────────────
+function miniGamePassing(canvas, ctx, player) {
+  var w = canvas.width, h = canvas.height;
+  var score = 0, timeLeft = 8000, startTime = Date.now();
+  var targets = [];
+  var ballX = w / 2, ballY = h - 50;
+  var passAnim = null; // { fromX, fromY, toX, toY, frame }
+
+  function spawnTarget() {
+    targets.push({
+      x: rand(40, w - 40),
+      y: rand(60, h - 120),
+      dx: (Math.random() - 0.5) * 3,
+      dy: (Math.random() - 0.5) * 2,
+      radius: 18,
+      hit: false,
+      alpha: 1
+    });
+  }
+  spawnTarget(); spawnTarget(); spawnTarget();
+
+  function draw() {
+    drawPitch(ctx, w, h);
+    // Targets
+    targets.forEach(function(t) {
+      if (t.hit) return;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,215,0,' + t.alpha + ')';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u{1F3AF}', t.x, t.y + 5);
+    });
+    // Pass animation
+    if (passAnim) {
+      var prog = passAnim.frame / 10;
+      var px = passAnim.fromX + (passAnim.toX - passAnim.fromX) * prog;
+      var py = passAnim.fromY + (passAnim.toY - passAnim.fromY) * prog;
+      ctx.beginPath();
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+    // Player
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px DM Sans';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU', ballX, ballY + 4);
+  }
+
+  function update() {
+    var elapsed = Date.now() - startTime;
+    timeLeft = Math.max(0, 8000 - elapsed);
+    var pct = timeLeft / 8000;
+
+    // Move targets
+    targets.forEach(function(t) {
+      if (t.hit) return;
+      t.x += t.dx;
+      t.y += t.dy;
+      if (t.x < 30 || t.x > w - 30) t.dx *= -1;
+      if (t.y < 50 || t.y > h - 100) t.dy *= -1;
+      // Speed up over time
+      if (elapsed > 4000) { t.dx *= 1.001; t.dy *= 1.001; }
+    });
+
+    // Pass animation
+    if (passAnim) {
+      passAnim.frame++;
+      if (passAnim.frame >= 10) passAnim = null;
+    }
+
+    // Respawn hit targets
+    if (targets.filter(function(t) { return !t.hit; }).length < 2) {
+      spawnTarget();
+    }
+
+    draw();
+    document.getElementById('mgScore').textContent = 'Hits: ' + score;
+    document.getElementById('mgTimer').textContent = (timeLeft / 1000).toFixed(1) + 's';
+    document.getElementById('mgTimerBar').style.width = (pct * 100) + '%';
+
+    if (timeLeft <= 0) {
+      setTimeout(function() { applyTrainingResult(player, score, 8); }, 500);
+      return;
+    }
+    activeGame = requestAnimationFrame(update);
+  }
+
+  function onTap(e) {
+    e.preventDefault();
+    var pt = getCanvasXY(e, canvas);
+    // Check hit on targets
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i];
+      if (t.hit) continue;
+      var dx = pt.x - t.x, dy = pt.y - t.y;
+      if (Math.sqrt(dx * dx + dy * dy) < t.radius + 10) {
+        t.hit = true;
+        score++;
+        passAnim = { fromX: ballX, fromY: ballY, toX: t.x, toY: t.y, frame: 0 };
+        playSound('coin');
+        break;
+      }
+    }
+  }
+
+  canvas.addEventListener('touchstart', onTap, { passive: false });
+  canvas.addEventListener('click', onTap);
+  activeGame = requestAnimationFrame(update);
+}
+
+// ─── MINI-GAME: DRIBBLE RUN ────────────────────────────
+function miniGameDribble(canvas, ctx, player) {
+  var w = canvas.width, h = canvas.height;
+  var playerX = w / 2, laneW = 80;
+  var cones = [], score = 0, missed = 0, totalCones = 0;
+  var timeLeft = 10000, startTime = Date.now();
+  var coneSpeed = 2;
+  var lastCone = 0;
+
+  function spawnCone() {
+    var lane = pick([-1, 0, 1]);
+    cones.push({ x: w / 2 + lane * laneW, y: -20, passed: false });
+    totalCones++;
+  }
+
+  function draw() {
+    // Pitch background
+    ctx.fillStyle = '#2d8b2d';
+    ctx.fillRect(0, 0, w, h);
+    // Lane lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([10, 10]);
+    for (var i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(w / 2 + i * laneW - laneW / 2, 0);
+      ctx.lineTo(w / 2 + i * laneW - laneW / 2, h);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // Cones
+    cones.forEach(function(c) {
+      if (c.passed) return;
+      ctx.font = '24px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u{1F9E7}', c.x, c.y + 8);
+    });
+    // Player
+    ctx.beginPath();
+    ctx.arc(playerX, h - 60, 16, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Ball at player's feet
+    ctx.beginPath();
+    ctx.arc(playerX + 8, h - 48, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  }
+
+  function update() {
+    var elapsed = Date.now() - startTime;
+    timeLeft = Math.max(0, 10000 - elapsed);
+    var pct = timeLeft / 10000;
+
+    // Speed increases
+    coneSpeed = 2 + elapsed / 3000;
+
+    // Spawn cones
+    if (elapsed - lastCone > 600) {
+      spawnCone();
+      lastCone = elapsed;
+    }
+
+    // Move cones
+    cones.forEach(function(c) {
+      if (c.passed) return;
+      c.y += coneSpeed;
+      // Check collision with player
+      if (c.y > h - 80 && c.y < h - 40 && Math.abs(c.x - playerX) < 30) {
+        c.passed = true;
+        missed++;
+        playSound('error');
+      }
+      // Passed safely
+      if (c.y > h - 30 && !c.passed) {
+        c.passed = true;
+        score++;
+      }
+    });
+
+    draw();
+    document.getElementById('mgScore').textContent = 'Dodged: ' + score;
+    document.getElementById('mgTimer').textContent = (timeLeft / 1000).toFixed(1) + 's';
+    document.getElementById('mgTimerBar').style.width = (pct * 100) + '%';
+
+    if (timeLeft <= 0) {
+      var total = score + missed;
+      setTimeout(function() { applyTrainingResult(player, score, Math.max(total, 1)); }, 500);
+      return;
+    }
+    activeGame = requestAnimationFrame(update);
+  }
+
+  var touchStartX = null;
+  function onTouchStart(e) {
+    e.preventDefault();
+    touchStartX = getCanvasXY(e, canvas).x;
+  }
+  function onTouchMove(e) {
+    e.preventDefault();
+    var pt = getCanvasXY(e, canvas);
+    if (touchStartX !== null) {
+      var diff = pt.x - touchStartX;
+      playerX = clamp(playerX + diff, w / 2 - laneW, w / 2 + laneW);
+      touchStartX = pt.x;
+    }
+  }
+  function onClick(e) {
+    var pt = getCanvasXY(e, canvas);
+    // Tap left/right to move
+    if (pt.x < w / 3) playerX = clamp(playerX - laneW, w / 2 - laneW, w / 2 + laneW);
+    else if (pt.x > w * 2 / 3) playerX = clamp(playerX + laneW, w / 2 - laneW, w / 2 + laneW);
+  }
+
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  canvas.addEventListener('click', onClick);
+  activeGame = requestAnimationFrame(update);
+}
+
+// ─── MATCH DAY SYSTEM ───────────────────────────────────
+var CLUB_COLORS = {
+  "Manchester City":"#6CABDD", "Arsenal":"#EF0107", "Chelsea":"#034694",
+  "Liverpool":"#C8102E", "Manchester United":"#DA291C", "Tottenham Hotspur":"#132257",
+  "Newcastle United":"#241F20", "Aston Villa":"#670E36", "Brighton":"#0057B8",
+  "West Ham":"#7A263A", "Fulham":"#000000", "Wolves":"#FDB913",
+  "Everton":"#003399", "Crystal Palace":"#1B458F", "Brentford":"#e30613",
+  "Nottingham Forest":"#DD0000", "Leicester City":"#003090", "Bournemouth":"#DA291C",
+  "Ipswich Town":"#0033A0", "Southampton":"#D71920"
+};
+
+function startMatchDay(idx) {
+  var sp = state.soldPlayers[idx];
+  if (!sp) return;
+
+  var opponent = pick(CLUBS.filter(function(c) { return c.name !== sp.club; }));
+
+  var html = '<div class="mini-game-container">';
+  html += '<div class="match-scoreboard" id="matchScore">' + sp.club + ' 0 - 0 ' + opponent.name + '</div>';
+  html += '<canvas id="matchCanvas" width="340" height="300"></canvas>';
+  html += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:4px;" id="matchMinute">0\'</div>';
+  html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="matchTimerBar" style="width:0%"></div></div>';
+  html += '<div class="match-commentary" id="matchComm"></div>';
+  html += '</div>';
+
+  openBottomSheet(html);
+
+  setTimeout(function() {
+    var canvas = document.getElementById('matchCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    runMatchSimulation(canvas, ctx, sp, opponent);
+  }, 200);
+}
+
+function runMatchSimulation(canvas, ctx, soldPlayer, opponent) {
+  var w = canvas.width, h = canvas.height;
+  var minute = 0, homeScore = 0, awayScore = 0;
+  var events = [];
+  var ballX = w / 2, ballY = h / 2;
+  var homeColor = CLUB_COLORS[soldPlayer.club] || '#00d4ff';
+  var awayColor = CLUB_COLORS[opponent.name] || '#ff3b5c';
+
+  // Generate player dots
+  var homePlayers = [], awayPlayers = [];
+  for (var i = 0; i < 11; i++) {
+    homePlayers.push({ x: rand(30, w - 30), y: rand(h / 2 + 20, h - 30), baseX: 0, baseY: 0 });
+    awayPlayers.push({ x: rand(30, w - 30), y: rand(30, h / 2 - 20), baseX: 0, baseY: 0 });
+  }
+  homePlayers.forEach(function(p) { p.baseX = p.x; p.baseY = p.y; });
+  awayPlayers.forEach(function(p) { p.baseX = p.x; p.baseY = p.y; });
+
+  // Mark one home player as "your player"
+  var starIdx = 0;
+  var starPlayer = homePlayers[starIdx];
+
+  var lastEventMin = -5;
+  var matchOver = false;
+  var yourPlayerGoals = 0, yourPlayerAssists = 0, yourPlayerCards = 0;
+
+  function addCommentary(text, cls) {
+    events.push({ text: text, cls: cls || '' });
+    var comm = document.getElementById('matchComm');
+    if (comm) {
+      var div = document.createElement('div');
+      div.className = cls || '';
+      div.textContent = text;
+      comm.appendChild(div);
+      comm.scrollTop = comm.scrollHeight;
+    }
+  }
+
+  function draw() {
+    drawPitch(ctx, w, h);
+    // Home players
+    homePlayers.forEach(function(p, i) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, i === starIdx ? 8 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = homeColor;
+      ctx.fill();
+      if (i === starIdx) {
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+    // Away players
+    awayPlayers.forEach(function(p) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = awayColor;
+      ctx.fill();
+    });
+    // Ball
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  }
+
+  function update() {
+    if (matchOver) return;
+
+    minute += 0.3;
+
+    // Move players randomly near their base
+    homePlayers.forEach(function(p) {
+      p.x = p.baseX + Math.sin(Date.now() / 1000 + p.baseX) * 20;
+      p.y = p.baseY + Math.cos(Date.now() / 800 + p.baseY) * 15;
+    });
+    awayPlayers.forEach(function(p) {
+      p.x = p.baseX + Math.sin(Date.now() / 900 + p.baseX) * 20;
+      p.y = p.baseY + Math.cos(Date.now() / 1100 + p.baseY) * 15;
+    });
+
+    // Ball follows random player
+    var target = Math.random() > 0.5 ? pick(homePlayers) : pick(awayPlayers);
+    ballX += (target.x - ballX) * 0.1;
+    ballY += (target.y - ballY) * 0.1;
+
+    // Generate events
+    if (minute - lastEventMin > 8 && Math.random() < 0.15) {
+      lastEventMin = Math.floor(minute);
+      var eventRoll = Math.random();
+      var playerBonus = soldPlayer.rating / 100;
+
+      if (eventRoll < 0.25 * playerBonus) {
+        // Your player scores!
+        homeScore++;
+        yourPlayerGoals++;
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! " + soldPlayer.name + " scores for " + soldPlayer.club + "!", 'goal-event');
+        playSound('sell');
+      } else if (eventRoll < 0.35) {
+        // Your player assist
+        homeScore++;
+        yourPlayerAssists++;
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! Assisted by " + soldPlayer.name + "!", 'goal-event');
+        playSound('coin');
+      } else if (eventRoll < 0.5) {
+        // Home team scores (not your player)
+        homeScore++;
+        addCommentary(Math.floor(minute) + "' \u26BD " + soldPlayer.club + " score!", 'goal-event');
+      } else if (eventRoll < 0.65) {
+        // Away scores
+        awayScore++;
+        addCommentary(Math.floor(minute) + "' \u26BD " + opponent.name + " equalize!", 'goal-event');
+      } else if (eventRoll < 0.75) {
+        // Yellow card
+        if (Math.random() < 0.3) {
+          yourPlayerCards++;
+          addCommentary(Math.floor(minute) + "' \u{1F7E8} Yellow card for " + soldPlayer.name, 'card-event');
+        } else {
+          addCommentary(Math.floor(minute) + "' \u{1F7E8} Yellow card shown", 'card-event');
+        }
+      } else {
+        addCommentary(Math.floor(minute) + "' Good chance but saved by the keeper!", '');
+      }
+    }
+
+    // Update UI
+    document.getElementById('matchScore').textContent = soldPlayer.club + ' ' + homeScore + ' - ' + awayScore + ' ' + opponent.name;
+    document.getElementById('matchMinute').textContent = Math.floor(Math.min(minute, 90)) + "'";
+    document.getElementById('matchTimerBar').style.width = (Math.min(minute, 90) / 90 * 100) + '%';
+
+    draw();
+
+    if (minute >= 90) {
+      matchOver = true;
+      addCommentary("90' Full time! " + soldPlayer.club + " " + homeScore + " - " + awayScore + " " + opponent.name, '');
+
+      setTimeout(function() {
+        finishMatchDay(soldPlayer, opponent, homeScore, awayScore, yourPlayerGoals, yourPlayerAssists);
+      }, 1000);
+      return;
+    }
+
+    activeGame = requestAnimationFrame(update);
+  }
+
+  addCommentary("Kick off! " + soldPlayer.club + " vs " + opponent.name, '');
+  addCommentary(soldPlayer.name + " (" + soldPlayer.rating + " rated) is in the starting lineup!", '');
+  activeGame = requestAnimationFrame(update);
+}
+
+function finishMatchDay(soldPlayer, opponent, homeScore, awayScore, goals, assists) {
+  var repBonus = 0;
+  var isMOTM = goals >= 2 || (goals >= 1 && assists >= 1);
+
+  if (goals > 0) repBonus += goals;
+  if (assists > 0) repBonus += assists;
+  if (isMOTM) repBonus += 2;
+  if (homeScore > awayScore) repBonus += 1;
+
+  state.reputation = clamp(state.reputation + repBonus, 0, 100);
+
+  var resultHTML = '<div class="mini-game-result">';
+  resultHTML += '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">FULL TIME</div>';
+  resultHTML += '<div class="match-scoreboard">' + soldPlayer.club + ' ' + homeScore + ' - ' + awayScore + ' ' + opponent.name + '</div>';
+
+  resultHTML += '<div style="margin:16px 0;">';
+  resultHTML += '<div style="font-weight:700;font-size:16px;margin-bottom:8px;">' + soldPlayer.name + '\'s Performance</div>';
+  if (goals > 0) resultHTML += '<div style="color:var(--green);">\u26BD Goals: ' + goals + '</div>';
+  if (assists > 0) resultHTML += '<div style="color:var(--accent);">\u{1F3AF} Assists: ' + assists + '</div>';
+  if (isMOTM) resultHTML += '<div style="color:var(--gold);font-weight:700;margin-top:8px;">\u{1F31F} MAN OF THE MATCH!</div>';
+  if (goals === 0 && assists === 0) resultHTML += '<div style="color:var(--muted);">Quiet game, but gained experience</div>';
+  resultHTML += '</div>';
+
+  if (repBonus > 0) {
+    resultHTML += '<div style="color:var(--gold);font-size:14px;">+' + repBonus + ' Reputation</div>';
+  }
+
+  resultHTML += '<button class="btn btn-primary" style="margin-top:16px;" onclick="closeBottomSheet();updateTopBar();renderCurrentTab();">DONE</button>';
+  resultHTML += '</div>';
+
+  document.getElementById('sheetContent').innerHTML = resultHTML;
+
+  if (isMOTM) {
+    showToast("\u{1F31F} " + soldPlayer.name + " is Man of the Match!", "success");
+    confettiBurst();
+  } else if (repBonus > 0) {
+    showToast("\u{1F4AA} " + soldPlayer.name + " performed well! +" + repBonus + " rep", "success");
+  }
+
+  saveGame();
+}
+
 // ─── GAME INIT ─────────────────────────────────────────
 function selectDifficulty(diff, el) {
   document.querySelectorAll(".diff-btn").forEach(function(b) { b.classList.remove("selected"); });
@@ -1776,6 +2630,8 @@ function startGame() {
   state.tutorialDismissed = false;
   state.trainedThisSeason = false;
   state.dealsThisSeason = false;
+  state.soldPlayers = [];
+  state.johnPedroSeen = false;
 
   pickWorldEvent();
   generateScoutPool();
@@ -1823,6 +2679,8 @@ function resetGame() {
   state.tutorialDismissed = false;
   state.trainedThisSeason = false;
   state.dealsThisSeason = false;
+  state.soldPlayers = [];
+  state.johnPedroSeen = false;
   deleteSave();
   checkContinueButton();
 }
