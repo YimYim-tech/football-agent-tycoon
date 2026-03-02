@@ -2706,15 +2706,14 @@ var fbApp = null, fbDb = null, fbListenerRef = null;
 function initFirebase() {
   if (fbApp) return;
   try {
-    // TODO: Replace with your Firebase project config
     var firebaseConfig = {
-      apiKey: "YOUR_API_KEY_HERE",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "000000000000",
-      appId: "YOUR_APP_ID_HERE"
+      apiKey: "AIzaSyA7Orm6l_4VrkQQiHcf8NVUvtq-eKv_zFc",
+      authDomain: "football-agent-tycoon.firebaseapp.com",
+      databaseURL: "https://football-agent-tycoon-default-rtdb.firebaseio.com",
+      projectId: "football-agent-tycoon",
+      storageBucket: "football-agent-tycoon.firebasestorage.app",
+      messagingSenderId: "1091784824661",
+      appId: "1:1091784824661:web:d9b7369752ab81333701dc"
     };
     fbApp = firebase.initializeApp(firebaseConfig);
     fbDb = firebase.database();
