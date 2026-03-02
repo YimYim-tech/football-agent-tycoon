@@ -41,10 +41,16 @@ html, body {
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
+#topBar .left-group { display: flex; align-items: center; gap: 8px; }
 #topBar .agency-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--accent); }
 #topBar .season-label { font-size: 12px; color: var(--muted); }
 #topBar .budget { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--green); }
 #topBar .rep { font-size: 12px; color: var(--gold); }
+.mute-btn {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: var(--muted); padding: 4px; min-width: 32px; min-height: 32px;
+  display: flex; align-items: center; justify-content: center;
+}
 
 #content {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -142,19 +148,19 @@ html, body {
 .btn-row { display: flex; gap: 8px; margin-top: 12px; }
 .btn-row .btn { flex: 1; }
 
-/* ─── BOTTOM SHEET ───────────────────────────────── */
+/* ─── BOTTOM SHEET (FIX #1: solid background, higher z-index, bright border) ─── */
 #overlay {
   display: none; position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.7);
 }
 #overlay.show { display: block; }
 
 #bottomSheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
-  background: var(--surface);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 250;
+  background: #111d2e;
   border-radius: 24px 24px 0 0;
-  border-top: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 -8px 40px rgba(0,212,255,0.2);
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)) 16px;
   max-height: 85vh; overflow-y: auto;
   transform: translateY(100%);
@@ -217,7 +223,7 @@ html, body {
   letter-spacing: 6px;
 }
 
-/* ─── SPLASH SCREEN ──────────────────────────────── */
+/* ─── SPLASH SCREEN (FIX #7a: user-select text for input) ─── */
 #splashScreen {
   position: fixed; inset: 0; z-index: 600;
   background: var(--bg);
@@ -234,6 +240,7 @@ html, body {
   color: var(--text); font-size: 18px; font-family: 'DM Sans', sans-serif;
   text-align: center; outline: none;
   margin-bottom: 24px;
+  -webkit-user-select: text; user-select: text;
 }
 .splash-input:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
 .splash-input::placeholder { color: var(--muted); }
@@ -393,6 +400,46 @@ html, body {
   #topBar { height: 44px; }
   #content { padding-top: 52px; }
 }
+
+/* ─── FIX #4 & #5: Tutorial hint ─────────────────── */
+@keyframes hint-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,212,255,0.2); }
+  50% { box-shadow: 0 0 20px rgba(0,212,255,0.5); }
+}
+.tutorial-hint {
+  background: linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,212,255,0.04));
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;
+  animation: hint-pulse 2s ease-in-out infinite;
+  cursor: pointer;
+  font-size: 14px; line-height: 1.6;
+}
+
+/* ─── Season step guide ──────────────────────────── */
+.checklist-card {
+  background: var(--surface);
+  border-radius: 16px; border: 1px solid var(--border);
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.checklist-item {
+  padding: 6px 0; font-size: 14px; display: flex; align-items: center; gap: 8px;
+}
+.checklist-item.done { color: var(--green); }
+.checklist-item.pending { color: var(--muted); }
+
+/* ─── FIX #7d: Train tab single column on small screens ─── */
+.train-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+@media (max-width: 420px) {
+  .train-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Continue button on splash ──────────────────── */
+.btn-continue {
+  background: transparent; border: 1px solid var(--accent); color: var(--accent);
+  margin-bottom: 12px;
+}
 </style>
 </head>
 <body>
@@ -408,6 +455,7 @@ html, body {
     <button class="diff-btn" data-diff="pro" onclick="selectDifficulty('pro',this)">&#9889; PRO &mdash; $3,000,000</button>
     <button class="diff-btn" data-diff="legend" onclick="selectDifficulty('legend',this)">&#128128; LEGEND &mdash; $1,500,000</button>
   </div>
+  <button class="btn btn-continue" id="continueBtn" style="max-width:320px;display:none;" onclick="continueGame()">&#9654;&#65039; CONTINUE</button>
   <button class="btn btn-primary btn-pulse" style="max-width:320px;" onclick="startGame()">START CAREER</button>
 </div>
 
@@ -439,13 +487,18 @@ html, body {
 <!-- MAIN APP -->
 <div id="app" style="display:none;">
   <div id="topBar">
-    <div>
-      <div class="agency-name" id="topAgency"></div>
-      <div class="season-label" id="topSeason"></div>
+    <div class="left-group">
+      <div>
+        <div class="agency-name" id="topAgency"></div>
+        <div class="season-label" id="topSeason"></div>
+      </div>
     </div>
-    <div style="text-align:right;">
-      <div class="budget" id="topBudget"></div>
-      <div class="rep" id="topRep"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="text-align:right;">
+        <div class="budget" id="topBudget"></div>
+        <div class="rep" id="topRep"></div>
+      </div>
+      <button class="mute-btn" id="muteBtn" onclick="toggleMute()">&#128266;</button>
     </div>
   </div>
   <div id="content"></div>
@@ -480,7 +533,11 @@ const state = {
   currentTab: "hub",
   playerIdCounter: 1,
   seasonResultShown: false,
-  scoutFilter: "ALL"
+  scoutFilter: "ALL",
+  tutorialDismissed: false,
+  trainedThisSeason: false,
+  dealsThisSeason: false,
+  soundMuted: false
 };
 
 // ─── PREMIER LEAGUE CLUBS ──────────────────────────────
@@ -587,8 +644,13 @@ const HEADLINES_IVAN = [
 // ─── HELPER FUNCTIONS ──────────────────────────────────
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function fmt(n) { return "$" + Math.abs(n).toLocaleString("en-US"); }
-function fmtSigned(n) { return (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString("en-US"); }
+
+// FIX #7b: fmt() handles negative numbers properly
+function fmt(n) {
+  if (n < 0) return "-$" + Math.abs(n).toLocaleString("en-US");
+  return "$" + Math.abs(n).toLocaleString("en-US");
+}
+function fmtSigned(n) { return (n < 0 ? "-" : "+") + "$" + Math.abs(n).toLocaleString("en-US"); }
 
 const NAT_LABELS = {
   brazil:"Brazil", france:"France", england:"England", spain:"Spain",
@@ -616,12 +678,67 @@ function moodEmoji(mood) {
   return "\u{1F620}";
 }
 
+// ─── FIX #6: SOUND EFFECTS (Web Audio API) ─────────────
+function playSound(type) {
+  if (state.soundMuted) return;
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (type === 'sign') { osc.frequency.value = 523; gain.gain.value = 0.3; }
+    else if (type === 'sell') { osc.frequency.value = 659; gain.gain.value = 0.3; }
+    else if (type === 'train') { osc.frequency.value = 440; gain.gain.value = 0.2; }
+    else if (type === 'error') { osc.frequency.value = 200; gain.gain.value = 0.3; }
+    else if (type === 'coin') { osc.frequency.value = 880; gain.gain.value = 0.2; }
+    else { osc.frequency.value = 600; gain.gain.value = 0.2; }
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+// FIX #7c: Mute toggle
+function toggleMute() {
+  state.soundMuted = !state.soundMuted;
+  document.getElementById("muteBtn").innerHTML = state.soundMuted ? "&#128263;" : "&#128266;";
+  saveGame();
+}
+
+// ─── FIX #3: SAVE/LOAD (localStorage) ──────────────────
+function saveGame() {
+  try {
+    localStorage.setItem('fat_save', JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadGame() {
+  try {
+    var s = localStorage.getItem('fat_save');
+    if (s) {
+      var parsed = JSON.parse(s);
+      Object.assign(state, parsed);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function hasSave() {
+  return !!localStorage.getItem('fat_save');
+}
+
+function deleteSave() {
+  localStorage.removeItem('fat_save');
+}
+
 // ─── PLAYER VALUE ──────────────────────────────────────
 function calcValue(player) {
-  const base = Math.pow(player.rating, 2) * 800;
-  const ageMult = Math.max(0.3, (33 - player.age) / 15);
-  const potBonus = (player.potentialRating - player.rating) * 30000;
-  let val = Math.round((base * ageMult + potBonus) / 10000) * 10000;
+  var base = Math.pow(player.rating, 2) * 800;
+  var ageMult = Math.max(0.3, (33 - player.age) / 15);
+  var potBonus = (player.potentialRating - player.rating) * 30000;
+  var val = Math.round((base * ageMult + potBonus) / 10000) * 10000;
 
   // World event modifiers
   if (state.worldEvent) {
@@ -637,20 +754,20 @@ function calcWages(player) {
 }
 
 function calcWageBill() {
-  return state.roster.reduce((sum, p) => sum + calcWages(p), 0);
+  return state.roster.reduce(function(sum, p) { return sum + calcWages(p); }, 0);
 }
 
 // ─── PLAYER GENERATION ─────────────────────────────────
 function generatePlayer(ageMin, ageMax, ratingMin, ratingMax) {
-  const nat = pick(NATIONALITIES);
-  const names = NAMES[nat];
-  const age = rand(ageMin, ageMax);
-  const rating = rand(ratingMin, ratingMax);
-  const potStars = clamp(Math.floor((rating + rand(5, 35)) / 20), 1, 5);
-  const potentialRating = clamp(rating + potStars * rand(3, 6), rating, 99);
-  const trait = Math.random() < 0.6 ? pick(TRAITS) : null;
-  const pos = pick(POSITIONS);
-  const signingFee = Math.round((rating * rating * 15 + age * 5000 + rand(10000, 100000)) / 10000) * 10000;
+  var nat = pick(NATIONALITIES);
+  var names = NAMES[nat];
+  var age = rand(ageMin, ageMax);
+  var rating = rand(ratingMin, ratingMax);
+  var potStars = clamp(Math.floor((rating + rand(5, 35)) / 20), 1, 5);
+  var potentialRating = clamp(rating + potStars * rand(3, 6), rating, 99);
+  var trait = Math.random() < 0.6 ? pick(TRAITS) : null;
+  var pos = pick(POSITIONS);
+  var signingFee = Math.round((rating * rating * 15 + age * 5000 + rand(10000, 100000)) / 10000) * 10000;
 
   return {
     id: state.playerIdCounter++,
@@ -658,11 +775,11 @@ function generatePlayer(ageMin, ageMax, ratingMin, ratingMax) {
     lastName: pick(names.last),
     nationality: nat,
     flag: names.flag,
-    age, rating, potentialRating,
+    age: age, rating: rating, potentialRating: potentialRating,
     potentialStars: potStars,
     position: pos,
-    trait,
-    signingFee,
+    trait: trait,
+    signingFee: signingFee,
     mood: "happy",
     seasonsNotTrained: 0,
     injured: false,
@@ -672,13 +789,13 @@ function generatePlayer(ageMin, ageMax, ratingMin, ratingMax) {
 
 function generateScoutPool() {
   state.availablePlayers = [];
-  let rMin = 40, rMax = 62;
+  var rMin = 40, rMax = 62;
   if (state.reputation >= 20) { rMin = 45; rMax = 68; }
   if (state.reputation >= 40) { rMin = 50; rMax = 74; }
   if (state.reputation >= 60) { rMin = 55; rMax = 80; }
   if (state.reputation >= 80) { rMin = 60; rMax = 88; }
 
-  for (let i = 0; i < 5; i++) {
+  for (var i = 0; i < 5; i++) {
     state.availablePlayers.push(generatePlayer(16, 24, rMin, rMax));
   }
 }
@@ -688,33 +805,32 @@ function generateClubOffers() {
   state.clubOffers = [];
   if (state.roster.length === 0) return;
 
-  let numOffers = 3;
+  var numOffers = 3;
   if (state.worldEvent && state.worldEvent.type === "extra_offers") numOffers = 5;
 
   // Filter eligible clubs based on reputation
-  let eligibleClubs = CLUBS.filter(c => {
+  var eligibleClubs = CLUBS.filter(function(c) {
     if (state.reputation < 30 && c.tier <= 2) return false;
     if (state.reputation < 50 && c.tier === 1) return false;
     if (state.reputation < 70 && c.tier === 1 && c.personality === "Splasher") return false;
     return true;
   });
-  if (eligibleClubs.length === 0) eligibleClubs = CLUBS.filter(c => c.tier >= 3);
+  if (eligibleClubs.length === 0) eligibleClubs = CLUBS.filter(function(c) { return c.tier >= 3; });
 
   // Shuffle preferred positions each season
-  eligibleClubs = eligibleClubs.map(c => ({
-    ...c,
-    preferredPosition: pick(POSITIONS)
-  }));
+  eligibleClubs = eligibleClubs.map(function(c) {
+    return Object.assign({}, c, { preferredPosition: pick(POSITIONS) });
+  });
 
-  const sellable = state.roster.filter(p => !p.injured);
+  var sellable = state.roster.filter(function(p) { return !p.injured; });
   if (sellable.length === 0) return;
 
-  for (let i = 0; i < Math.min(numOffers, sellable.length); i++) {
-    const player = sellable[i % sellable.length];
-    const club = pick(eligibleClubs);
-    const val = calcValue(player);
+  for (var i = 0; i < Math.min(numOffers, sellable.length); i++) {
+    var player = sellable[i % sellable.length];
+    var club = pick(eligibleClubs);
+    var val = calcValue(player);
 
-    let offerMult = 0.85;
+    var offerMult = 0.85;
     if (club.personality === "Splasher") offerMult = rand(95, 115) / 100;
     else if (club.personality === "Fair Dealer") offerMult = rand(80, 100) / 100;
     else offerMult = rand(70, 90) / 100;
@@ -730,12 +846,12 @@ function generateClubOffers() {
       offerMult -= 0.15;
     }
 
-    const offerAmount = Math.round(val * offerMult / 10000) * 10000;
+    var offerAmount = Math.round(val * offerMult / 10000) * 10000;
     if (offerAmount > club.maxBudget) continue;
 
     state.clubOffers.push({
       id: Date.now() + i,
-      club,
+      club: club,
       playerId: player.id,
       playerName: player.firstName + " " + player.lastName,
       playerPos: player.position,
@@ -758,26 +874,30 @@ function pickWorldEvent() {
 function signPlayer(player) {
   if (state.budget < player.signingFee) {
     showToast("Not enough budget! Need " + fmt(player.signingFee), "error");
+    playSound('error');
     return false;
   }
   state.budget -= player.signingFee;
-  state.roster.push({ ...player, seasonsNotTrained: 0, seasonsSigned: 0 });
-  state.availablePlayers = state.availablePlayers.filter(p => p.id !== player.id);
+  state.roster.push(Object.assign({}, player, { seasonsNotTrained: 0, seasonsSigned: 0 }));
+  state.availablePlayers = state.availablePlayers.filter(function(p) { return p.id !== player.id; });
   showToast("\u2705 Signed " + player.firstName + " " + player.lastName + "!", "success");
+  playSound('sign');
   state.reputation = clamp(state.reputation + 1, 0, 100);
   updateTopBar();
+  saveGame();
   return true;
 }
 
 function trainPlayer(playerId, method) {
-  const player = state.roster.find(p => p.id === playerId);
+  var player = state.roster.find(function(p) { return p.id === playerId; });
   if (!player) return;
   if (player.injured) {
     showToast(player.firstName + " is injured! Can't train.", "error");
+    playSound('error');
     return;
   }
 
-  let cost = 0, gainMin = 0, gainMax = 0, injuryChance = 0;
+  var cost = 0, gainMin = 0, gainMax = 0, injuryChance = 0;
   if (method === "basic") { cost = 100000; gainMin = 1; gainMax = 3; injuryChance = 0; }
   else if (method === "intensive") { cost = 300000; gainMin = 3; gainMax = 7; injuryChance = 0.1; }
   else if (method === "loan") { cost = 0; gainMin = 2; gainMax = 8; injuryChance = 0.2; }
@@ -789,54 +909,61 @@ function trainPlayer(playerId, method) {
 
   if (state.budget < cost) {
     showToast("Not enough budget!", "error");
+    playSound('error');
     return;
   }
 
   state.budget -= cost;
 
   // Mood modifier
-  let moodPenalty = 0;
+  var moodPenalty = 0;
   if (player.mood === "neutral") moodPenalty = 1;
   if (player.mood === "unhappy") moodPenalty = Math.floor((gainMin + gainMax) / 4);
 
-  let gain = rand(gainMin, gainMax) - moodPenalty;
+  var gain = rand(gainMin, gainMax) - moodPenalty;
 
   // Check injury
   if (Math.random() < injuryChance) {
     player.injured = true;
     gain = Math.max(0, Math.floor(gain / 2));
     showToast("\u{1FA79} " + player.firstName + " got injured during training!", "error");
+    playSound('error');
     flashScreen("var(--red)");
   }
 
-  const oldRating = player.rating;
+  var oldRating = player.rating;
   player.rating = clamp(player.rating + Math.max(0, gain), 0, player.potentialRating);
   player.seasonsNotTrained = 0;
+  state.trainedThisSeason = true;
   if (player.mood === "unhappy") player.mood = "neutral";
   else if (player.mood === "neutral") player.mood = "happy";
 
   if (gain > 0 && !player.injured) {
     showToast("\u{1F4AA} " + player.firstName + " trained! +" + (player.rating - oldRating) + " rating!", "success");
+    playSound('train');
   } else if (!player.injured) {
     showToast(player.firstName + " trained but no improvement this time.", "info");
+    playSound('train');
   }
 
   updateTopBar();
   closeBottomSheet();
   renderCurrentTab();
+  saveGame();
 }
 
 function acceptOffer(offerId) {
-  const offer = state.clubOffers.find(o => o.id === offerId);
+  var offer = state.clubOffers.find(function(o) { return o.id === offerId; });
   if (!offer) return;
 
-  const agentFee = Math.round(offer.amount * 0.10);
-  const totalIncome = offer.amount;
+  var agentFee = Math.round(offer.amount * 0.10);
+  var totalIncome = offer.amount;
   state.budget += totalIncome;
   state.careerEarnings += totalIncome;
-  state.roster = state.roster.filter(p => p.id !== offer.playerId);
-  state.clubOffers = state.clubOffers.filter(o => o.playerId !== offer.playerId);
+  state.roster = state.roster.filter(function(p) { return p.id !== offer.playerId; });
+  state.clubOffers = state.clubOffers.filter(function(o) { return o.playerId !== offer.playerId; });
   state.reputation = clamp(state.reputation + (offer.club.tier <= 2 ? 4 : 2), 0, 100);
+  state.dealsThisSeason = true;
 
   state.seasonLog.push({
     season: state.season,
@@ -848,20 +975,22 @@ function acceptOffer(offerId) {
   });
 
   showToast("\u{1F4B0} DEAL DONE! +" + fmt(totalIncome) + " earned!", "success");
-  if (offer.amount > 1000000) confettiBurst();
+  playSound('sell');
+  if (offer.amount > 1000000) { confettiBurst(); playSound('coin'); }
 
   updateTopBar();
   closeBottomSheet();
   renderCurrentTab();
+  saveGame();
 }
 
 function negotiate(offerId, strategy) {
-  const offer = state.clubOffers.find(o => o.id === offerId);
+  var offer = state.clubOffers.find(function(o) { return o.id === offerId; });
   if (!offer || offer.negotiated) return;
 
   offer.negotiated = true;
-  let mult = 1;
-  let success = false;
+  var mult = 1;
+  var success = false;
 
   if (strategy === "push") {
     // High risk high reward
@@ -893,63 +1022,67 @@ function negotiate(offerId, strategy) {
 
   if (success) {
     showToast("\u{1F91D} Negotiation success! New offer: " + fmt(offer.amount), "success");
+    playSound('coin');
   } else {
     showToast("\u{1F615} Negotiation failed! Offer: " + fmt(offer.amount), "error");
+    playSound('error');
     flashScreen("var(--red)");
   }
 
   closeBottomSheet();
   renderCurrentTab();
+  saveGame();
 }
 
 function releasePlayer(playerId) {
-  const player = state.roster.find(p => p.id === playerId);
+  var player = state.roster.find(function(p) { return p.id === playerId; });
   if (!player) return;
-  state.roster = state.roster.filter(p => p.id !== playerId);
-  state.clubOffers = state.clubOffers.filter(o => o.playerId !== playerId);
+  state.roster = state.roster.filter(function(p) { return p.id !== playerId; });
+  state.clubOffers = state.clubOffers.filter(function(o) { return o.playerId !== playerId; });
   showToast(player.firstName + " " + player.lastName + " released.", "info");
   closeBottomSheet();
   renderCurrentTab();
+  saveGame();
 }
 
 // ─── IVAN BOT ──────────────────────────────────────────
 function ivanTakeTurn() {
   state.ivan.lastMove = "";
-  const actions = [];
+  var actions = [];
 
   // 1. Try to sign high-potential available player
-  const goodPick = state.availablePlayers.find(p => p.potentialStars >= 4 && p.signingFee < 600000);
+  var goodPick = state.availablePlayers.find(function(p) { return p.potentialStars >= 4 && p.signingFee < 600000; });
   if (goodPick && state.ivan.budget >= goodPick.signingFee) {
     state.ivan.budget -= goodPick.signingFee;
-    state.ivan.roster.push({ ...goodPick });
-    state.availablePlayers = state.availablePlayers.filter(p => p.id !== goodPick.id);
+    state.ivan.roster.push(Object.assign({}, goodPick));
+    state.availablePlayers = state.availablePlayers.filter(function(p) { return p.id !== goodPick.id; });
     actions.push("Signed " + goodPick.flag + " " + goodPick.firstName);
     state.ivan.reputation = clamp(state.ivan.reputation + 2, 0, 100);
   }
 
   // 2. Train best player
   if (state.ivan.roster.length > 0) {
-    const best = state.ivan.roster.reduce((a, b) => a.rating > b.rating ? a : b);
-    const gain = rand(3, 7);
+    var best = state.ivan.roster.reduce(function(a, b) { return a.rating > b.rating ? a : b; });
+    var gain = rand(3, 7);
     best.rating = clamp(best.rating + gain, 0, 99);
     if (state.ivan.budget >= 300000) state.ivan.budget -= 300000;
   }
 
   // 3. Sell highest value player to tier 1-2
   if (state.ivan.roster.length > 1) {
-    const toSell = state.ivan.roster.reduce((a, b) => calcValue(a) > calcValue(b) ? a : b);
-    const val = calcValue(toSell);
-    const commission = Math.round(val * 0.1);
+    var toSell = state.ivan.roster.reduce(function(a, b) { return calcValue(a) > calcValue(b) ? a : b; });
+    var val = calcValue(toSell);
+    var commission = Math.round(val * 0.1);
     state.ivan.budget += commission;
     state.ivan.careerEarnings += commission;
-    state.ivan.roster = state.ivan.roster.filter(p => p.id !== toSell.id);
+    state.ivan.roster = state.ivan.roster.filter(function(p) { return p.id !== toSell.id; });
     state.ivan.reputation = clamp(state.ivan.reputation + 3, 0, 100);
-    const club = pick(CLUBS.filter(c => c.tier <= 2));
+    var club = pick(CLUBS.filter(function(c) { return c.tier <= 2; }));
     actions.push("Sold " + toSell.firstName + " to " + club.name + " for " + fmt(val));
   }
 
   // Age up Ivan's roster
-  state.ivan.roster.forEach(p => {
+  state.ivan.roster.forEach(function(p) {
     p.age++;
     if (p.age >= 30) p.rating = Math.max(40, p.rating - 1);
     if (p.age >= 33) p.rating = Math.max(35, p.rating - 2);
@@ -964,7 +1097,7 @@ function ivanTakeTurn() {
 
 // ─── MOOD SYSTEM ───────────────────────────────────────
 function updateMoods() {
-  state.roster.forEach(p => {
+  state.roster.forEach(function(p) {
     if (p.seasonsNotTrained >= 2 && p.mood === "happy") p.mood = "neutral";
     if (p.seasonsNotTrained >= 3 && p.mood === "neutral") p.mood = "unhappy";
     p.seasonsNotTrained++;
@@ -973,7 +1106,7 @@ function updateMoods() {
 
 // ─── AGE UP ────────────────────────────────────────────
 function ageUpRoster() {
-  state.roster.forEach(p => {
+  state.roster.forEach(function(p) {
     p.age++;
     p.seasonsSigned++;
     if (p.age >= 30) p.rating = Math.max(40, p.rating - 1);
@@ -988,7 +1121,7 @@ function endSeason() {
   state.seasonResultShown = true;
 
   // Deduct wages
-  const wageBill = calcWageBill();
+  var wageBill = calcWageBill();
   state.budget -= wageBill;
 
   // Age up
@@ -999,13 +1132,15 @@ function endSeason() {
   ivanTakeTurn();
 
   // Find best deal
-  const salesThisSeason = state.seasonLog.filter(l => l.season === state.season && l.type === "sale");
-  const bestDeal = salesThisSeason.length > 0
-    ? salesThisSeason.reduce((a, b) => a.amount > b.amount ? a : b)
+  var salesThisSeason = state.seasonLog.filter(function(l) { return l.season === state.season && l.type === "sale"; });
+  var bestDeal = salesThisSeason.length > 0
+    ? salesThisSeason.reduce(function(a, b) { return a.amount > b.amount ? a : b; })
     : null;
 
-  const repChange = rand(-2, 5);
+  var repChange = rand(-2, 5);
   state.reputation = clamp(state.reputation + repChange, 0, 100);
+
+  saveGame();
 
   // Show season end screen
   showSeasonEndScreen(bestDeal, wageBill, repChange);
@@ -1014,6 +1149,8 @@ function endSeason() {
 function advanceToNextSeason() {
   state.season++;
   state.seasonResultShown = false;
+  state.trainedThisSeason = false;
+  state.dealsThisSeason = false;
 
   if (state.season > 10) {
     showFinalScreen();
@@ -1021,12 +1158,13 @@ function advanceToNextSeason() {
   }
 
   // Season transition animation
-  showSeasonTransition(state.season, () => {
+  showSeasonTransition(state.season, function() {
     pickWorldEvent();
     generateScoutPool();
     generateClubOffers();
     updateTopBar();
     showTab("hub");
+    saveGame();
   });
 }
 
@@ -1034,21 +1172,21 @@ function advanceToNextSeason() {
 function updateTopBar() {
   document.getElementById("topAgency").textContent = state.agencyName;
   document.getElementById("topSeason").textContent = "Season " + state.season + "/10";
-  const budgetEl = document.getElementById("topBudget");
-  budgetEl.textContent = (state.budget < 0 ? "-" : "") + fmt(state.budget);
+  var budgetEl = document.getElementById("topBudget");
+  budgetEl.textContent = fmt(state.budget);
   budgetEl.style.color = state.budget < 0 ? "var(--red)" : "var(--green)";
   document.getElementById("topRep").textContent = "\u2B50 " + state.reputation + " REP";
 }
 
 function showTab(tab) {
   state.currentTab = tab;
-  document.querySelectorAll(".nav-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.querySelectorAll(".nav-tab").forEach(function(t) { t.classList.toggle("active", t.dataset.tab === tab); });
   document.getElementById("content").scrollTop = 0;
   renderCurrentTab();
 }
 
 function renderCurrentTab() {
-  const c = document.getElementById("content");
+  var c = document.getElementById("content");
   switch (state.currentTab) {
     case "hub": c.innerHTML = renderHub(); break;
     case "scout": c.innerHTML = renderScout(); break;
@@ -1060,11 +1198,40 @@ function renderCurrentTab() {
 
 // ─── HUB ───────────────────────────────────────────────
 function renderHub() {
-  const vocab = VOCAB[state.season - 1] || VOCAB[0];
-  const wageBill = calcWageBill();
-  const wageWarning = wageBill > state.budget * 0.4;
+  var vocab = VOCAB[state.season - 1] || VOCAB[0];
+  var wageBill = calcWageBill();
+  var wageWarning = wageBill > state.budget * 0.4;
 
-  let html = '';
+  var html = '';
+
+  // FIX #4: Tutorial hint on first play (Season 1, not dismissed)
+  if (state.season === 1 && !state.tutorialDismissed) {
+    html += '<div class="tutorial-hint" onclick="dismissTutorial()">';
+    html += '\u{1F44B} Welcome! Start by scouting players in the <strong>Scout</strong> tab \u2192 Sign them \u2192 Train them \u2192 Sell to Premier League clubs!';
+    html += '<div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap to dismiss</div>';
+    html += '</div>';
+  }
+
+  // FIX #5: Season step guide checklist
+  html += '<div class="checklist-card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">SEASON ' + state.season + ' CHECKLIST</div>';
+
+  var hasPlayers = state.roster.length > 0;
+  var hasTrained = state.trainedThisSeason;
+  var hasDeals = state.dealsThisSeason;
+
+  html += '<div class="checklist-item ' + (hasPlayers ? 'done' : 'pending') + '">';
+  html += (hasPlayers ? '\u2705' : '\u2610') + ' Scout & sign players</div>';
+
+  html += '<div class="checklist-item ' + (hasTrained ? 'done' : 'pending') + '">';
+  html += (hasTrained ? '\u2705' : '\u2610') + ' Train your players</div>';
+
+  html += '<div class="checklist-item ' + (hasDeals ? 'done' : 'pending') + '">';
+  html += (hasDeals ? '\u2705' : '\u2610') + ' Check offers in Sell tab</div>';
+
+  html += '<div class="checklist-item pending">';
+  html += '\u2610 End Season when ready</div>';
+  html += '</div>';
 
   // Vocab card
   html += '<div class="vocab-card">';
@@ -1097,7 +1264,7 @@ function renderHub() {
 
   // Best asset
   if (state.roster.length > 0) {
-    const best = state.roster.reduce((a, b) => calcValue(a) > calcValue(b) ? a : b);
+    var best = state.roster.reduce(function(a, b) { return calcValue(a) > calcValue(b) ? a : b; });
     html += '<div class="card">';
     html += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">\u{1F48E} TOP ASSET</div>';
     html += '<div style="font-weight:700;">' + best.flag + ' ' + best.firstName + ' ' + best.lastName + '</div>';
@@ -1129,25 +1296,32 @@ function renderHub() {
   return html;
 }
 
+// FIX #4: Dismiss tutorial
+function dismissTutorial() {
+  state.tutorialDismissed = true;
+  saveGame();
+  renderCurrentTab();
+}
+
 // ─── SCOUT ─────────────────────────────────────────────
 function renderScout() {
-  let html = '<div class="section-title">FIND YOUR NEXT STAR</div>';
+  var html = '<div class="section-title">FIND YOUR NEXT STAR</div>';
 
   // Filter row
   html += '<div class="filter-row">';
-  ["ALL","GK","DEF","MID","FWD"].forEach(f => {
+  ["ALL","GK","DEF","MID","FWD"].forEach(function(f) {
     html += '<div class="filter-chip ' + (state.scoutFilter === f ? 'active' : '') + '" onclick="setScoutFilter(\'' + f + '\')">' + f + '</div>';
   });
   html += '</div>';
 
-  const filtered = state.scoutFilter === "ALL"
+  var filtered = state.scoutFilter === "ALL"
     ? state.availablePlayers
-    : state.availablePlayers.filter(p => p.position === state.scoutFilter);
+    : state.availablePlayers.filter(function(p) { return p.position === state.scoutFilter; });
 
   if (filtered.length === 0) {
     html += '<div class="empty-state"><div class="icon">\u{1F50D}</div><div class="msg">No players match this filter.</div></div>';
   } else {
-    filtered.forEach((p, i) => {
+    filtered.forEach(function(p, i) {
       html += renderPlayerCardScout(p, i);
     });
   }
@@ -1158,8 +1332,8 @@ function renderScout() {
 }
 
 function renderPlayerCardScout(p, idx) {
-  const tierClass = getTierClass(p.rating);
-  let html = '<div class="player-card ' + tierClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
+  var tierClass = getTierClass(p.rating);
+  var html = '<div class="player-card ' + tierClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
   html += '<div class="player-header">';
   html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
   html += '<div class="player-meta">Age ' + p.age + ' \u00B7 ' + (NAT_LABELS[p.nationality] || p.nationality) + '</div></div>';
@@ -1184,7 +1358,7 @@ function renderPlayerCardScout(p, idx) {
   html += '<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">';
   html += '<div style="font-size:14px;">Signing Fee: <span class="money">' + fmt(p.signingFee) + '</span></div>';
   html += '</div>';
-  html += '<button class="btn btn-green" style="margin-top:8px;" onclick="signPlayer(state.availablePlayers.find(x=>x.id===' + p.id + '));renderCurrentTab();">SIGN HIM</button>';
+  html += '<button class="btn btn-green" style="margin-top:8px;" onclick="signPlayer(state.availablePlayers.find(function(x){return x.id===' + p.id + '}));renderCurrentTab();">SIGN HIM</button>';
   html += '</div>';
   return html;
 }
@@ -1197,6 +1371,7 @@ function setScoutFilter(f) {
 function refreshScoutPool() {
   if (state.budget < 50000) {
     showToast("Need $50,000 to scout!", "error");
+    playSound('error');
     return;
   }
   state.budget -= 50000;
@@ -1204,28 +1379,31 @@ function refreshScoutPool() {
   updateTopBar();
   renderCurrentTab();
   showToast("\u{1F50D} New players found!", "info");
+  saveGame();
 }
 
 // ─── TRAIN ─────────────────────────────────────────────
+// FIX #2: Removed card onclick; only TRAIN button triggers openTrainSheet
+// FIX #7d: Single column on small screens via CSS class .train-grid
 function renderTrain() {
-  let html = '<div class="section-title">DEVELOP YOUR PLAYERS</div>';
+  var html = '<div class="section-title">DEVELOP YOUR PLAYERS</div>';
 
   if (state.roster.length === 0) {
     html += '<div class="empty-state"><div class="icon">\u{1F3CB}\uFE0F</div><div class="msg">No players to train. Scout and sign some first!</div></div>';
     return html;
   }
 
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-  state.roster.forEach(p => {
-    const tierClass = getTierClass(p.rating);
-    html += '<div class="player-card ' + tierClass + '" style="padding:12px;" onclick="openTrainSheet(' + p.id + ')">';
+  html += '<div class="train-grid">';
+  state.roster.forEach(function(p) {
+    var tierClass = getTierClass(p.rating);
+    html += '<div class="player-card ' + tierClass + '" style="padding:12px;">';
     html += '<div style="font-weight:600;font-size:14px;">' + p.flag + ' ' + p.firstName + '</div>';
     html += '<div style="font-size:12px;color:var(--muted);">' + p.position + ' \u00B7 Age ' + p.age + '</div>';
     html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin:4px 0;">' + p.rating + '</div>';
     html += '<div>' + moodEmoji(p.mood) + ' ' + p.mood.charAt(0).toUpperCase() + p.mood.slice(1);
     if (p.injured) html += ' <span class="injury-badge">\u{1FA79} Injured</span>';
     html += '</div>';
-    html += '<div class="btn btn-primary btn-small" style="margin-top:8px;">TRAIN</div>';
+    html += '<button class="btn btn-primary btn-small" style="margin-top:8px;" onclick="event.stopPropagation();openTrainSheet(' + p.id + ')">TRAIN</button>';
     html += '</div>';
   });
   html += '</div>';
@@ -1234,10 +1412,10 @@ function renderTrain() {
 }
 
 function openTrainSheet(playerId) {
-  const p = state.roster.find(x => x.id === playerId);
+  var p = state.roster.find(function(x) { return x.id === playerId; });
   if (!p) return;
 
-  let html = '<div class="sheet-title">TRAIN ' + p.firstName.toUpperCase() + ' ' + p.lastName.toUpperCase() + '</div>';
+  var html = '<div class="sheet-title">TRAIN ' + p.firstName.toUpperCase() + ' ' + p.lastName.toUpperCase() + '</div>';
   html += '<div class="sheet-subtitle">' + p.position + ' \u00B7 Rating ' + p.rating + ' \u00B7 ' + moodEmoji(p.mood) + '</div>';
 
   if (p.injured) {
@@ -1267,7 +1445,7 @@ function openTrainSheet(playerId) {
 
 // ─── SELL ──────────────────────────────────────────────
 function renderSell() {
-  let html = '<div class="section-title">TRANSFER WINDOW</div>';
+  var html = '<div class="section-title">TRANSFER WINDOW</div>';
 
   if (state.clubOffers.length === 0) {
     html += '<div class="empty-state"><div class="icon">\u{1F4BC}</div><div class="msg">No offers yet. Train your players to attract clubs!</div></div>';
@@ -1276,8 +1454,8 @@ function renderSell() {
 
   html += '<div class="section-subtitle">' + state.clubOffers.length + ' CLUB' + (state.clubOffers.length > 1 ? 'S' : '') + ' WANT YOUR PLAYERS</div>';
 
-  state.clubOffers.forEach(o => {
-    const agentFee = Math.round(o.amount * 0.10);
+  state.clubOffers.forEach(function(o) {
+    var agentFee = Math.round(o.amount * 0.10);
     html += '<div class="offer-card">';
     html += '<div class="offer-club">' + o.club.name.toUpperCase() + ' ' + o.club.emoji + ' want</div>';
     html += '<div style="font-size:14px;color:var(--muted);margin:4px 0;">' + o.playerName + ' (' + o.playerPos + ', ' + o.playerRating + ' rated)</div>';
@@ -1299,16 +1477,17 @@ function renderSell() {
 }
 
 function rejectOffer(offerId) {
-  state.clubOffers = state.clubOffers.filter(o => o.id !== offerId);
+  state.clubOffers = state.clubOffers.filter(function(o) { return o.id !== offerId; });
   showToast("Offer rejected.", "info");
   renderCurrentTab();
+  saveGame();
 }
 
 function openNegotiateSheet(offerId) {
-  const offer = state.clubOffers.find(o => o.id === offerId);
+  var offer = state.clubOffers.find(function(o) { return o.id === offerId; });
   if (!offer) return;
 
-  let html = '<div class="sheet-title">NEGOTIATE WITH ' + offer.club.name.toUpperCase() + '</div>';
+  var html = '<div class="sheet-title">NEGOTIATE WITH ' + offer.club.name.toUpperCase() + '</div>';
   html += '<div class="sheet-subtitle">Current offer: ' + fmt(offer.amount) + ' for ' + offer.playerName + '</div>';
 
   html += '<div class="card" style="cursor:pointer;" onclick="negotiate(' + offer.id + ',\'push\')">';
@@ -1331,15 +1510,15 @@ function openNegotiateSheet(offerId) {
 
 // ─── SQUAD ─────────────────────────────────────────────
 function renderSquad() {
-  let html = '<div class="section-title">YOUR SQUAD</div>';
+  var html = '<div class="section-title">YOUR SQUAD</div>';
 
   if (state.roster.length === 0) {
     html += '<div class="empty-state"><div class="icon">\u{1F4CB}</div><div class="msg">No players signed yet. Head to Scout tab!</div></div>';
     return html;
   }
 
-  state.roster.forEach(p => {
-    const val = calcValue(p);
+  state.roster.forEach(function(p) {
+    var val = calcValue(p);
     html += '<div class="squad-row" onclick="openPlayerDetail(' + p.id + ')">';
     html += '<div style="display:flex;align-items:center;gap:10px;">';
     html += '<div>' + p.flag + '</div>';
@@ -1358,13 +1537,13 @@ function renderSquad() {
 }
 
 function openPlayerDetail(playerId) {
-  const p = state.roster.find(x => x.id === playerId);
+  var p = state.roster.find(function(x) { return x.id === playerId; });
   if (!p) return;
 
-  const val = calcValue(p);
-  const tierClass = getTierClass(p.rating);
+  var val = calcValue(p);
+  var tierClass = getTierClass(p.rating);
 
-  let html = '<div class="player-card ' + tierClass + '" style="margin-bottom:16px;">';
+  var html = '<div class="player-card ' + tierClass + '" style="margin-bottom:16px;">';
   html += '<div class="player-header">';
   html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
   html += '<div class="player-meta">Age ' + p.age + ' \u00B7 Signed ' + p.seasonsSigned + ' season' + (p.seasonsSigned !== 1 ? 's' : '') + ' ago</div></div>';
@@ -1398,74 +1577,74 @@ function openPlayerDetail(playerId) {
 function openBottomSheet(content) {
   document.getElementById("sheetContent").innerHTML = content;
   document.getElementById("overlay").classList.add("show");
-  requestAnimationFrame(() => {
+  requestAnimationFrame(function() {
     document.getElementById("bottomSheet").classList.add("show");
   });
 }
 
 function closeBottomSheet() {
   document.getElementById("bottomSheet").classList.remove("show");
-  setTimeout(() => {
+  setTimeout(function() {
     document.getElementById("overlay").classList.remove("show");
   }, 300);
 }
 
 // ─── ANIMATIONS ────────────────────────────────────────
 function showToast(msg, type) {
-  const container = document.getElementById("toastContainer");
-  const toast = document.createElement("div");
+  var container = document.getElementById("toastContainer");
+  var toast = document.createElement("div");
   toast.className = "toast toast-" + type;
   toast.textContent = msg;
   container.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
+  requestAnimationFrame(function() { toast.classList.add("show"); });
+  setTimeout(function() {
     toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(function() { toast.remove(); }, 300);
   }, 2500);
 }
 
 function confettiBurst() {
-  const container = document.getElementById("confettiContainer");
-  const colors = ["#ffd700","#00ff88","#00d4ff","#ff3b5c","#a855f7","#3b82f6"];
-  for (let i = 0; i < 30; i++) {
-    const piece = document.createElement("div");
+  var container = document.getElementById("confettiContainer");
+  var colors = ["#ffd700","#00ff88","#00d4ff","#ff3b5c","#a855f7","#3b82f6"];
+  for (var i = 0; i < 30; i++) {
+    var piece = document.createElement("div");
     piece.className = "confetti-piece";
     piece.style.background = pick(colors);
-    const tx = rand(-200, 200) + "px";
-    const ty = rand(-300, -50) + "px";
-    const rot = rand(0, 720) + "deg";
+    var tx = rand(-200, 200) + "px";
+    var ty = rand(-300, -50) + "px";
+    var rot = rand(0, 720) + "deg";
     piece.style.setProperty("--tx", tx);
     piece.style.setProperty("--ty", ty);
     piece.style.setProperty("--rot", rot);
     piece.style.animation = "confetti-fall " + (0.6 + Math.random() * 0.8) + "s ease-out forwards";
     piece.style.animationDelay = (Math.random() * 0.2) + "s";
     container.appendChild(piece);
-    setTimeout(() => piece.remove(), 2000);
+    (function(el) { setTimeout(function() { el.remove(); }, 2000); })(piece);
   }
 }
 
 function flashScreen(color) {
-  const el = document.getElementById("screenFlash");
+  var el = document.getElementById("screenFlash");
   el.style.background = color;
   el.style.display = "block";
   el.style.animation = "flash-anim 0.4s ease-out forwards";
-  setTimeout(() => { el.style.display = "none"; el.style.animation = ""; }, 500);
+  setTimeout(function() { el.style.display = "none"; el.style.animation = ""; }, 500);
 }
 
 function showSeasonTransition(n, callback) {
-  const overlay = document.getElementById("seasonOverlay");
-  const numEl = document.getElementById("seasonNum");
+  var overlay = document.getElementById("seasonOverlay");
+  var numEl = document.getElementById("seasonNum");
   overlay.classList.add("show");
   numEl.textContent = "";
 
-  const text = String(n);
-  let i = 0;
-  const typeInterval = setInterval(() => {
+  var text = String(n);
+  var i = 0;
+  var typeInterval = setInterval(function() {
     numEl.textContent += text[i];
     i++;
     if (i >= text.length) {
       clearInterval(typeInterval);
-      setTimeout(() => {
+      setTimeout(function() {
         overlay.classList.remove("show");
         if (callback) callback();
       }, 800);
@@ -1474,11 +1653,11 @@ function showSeasonTransition(n, callback) {
 }
 
 function animateMoney(from, to, element) {
-  const duration = 600;
-  const start = performance.now();
+  var duration = 600;
+  var start = performance.now();
   function step(ts) {
-    const progress = Math.min((ts - start) / duration, 1);
-    const current = Math.round(from + (to - from) * progress);
+    var progress = Math.min((ts - start) / duration, 1);
+    var current = Math.round(from + (to - from) * progress);
     element.textContent = fmt(current);
     if (progress < 1) requestAnimationFrame(step);
   }
@@ -1487,8 +1666,8 @@ function animateMoney(from, to, element) {
 
 // ─── SEASON END SCREEN ─────────────────────────────────
 function showSeasonEndScreen(bestDeal, wageBill, repChange) {
-  const screen = document.getElementById("seasonEndScreen");
-  let html = '';
+  var screen = document.getElementById("seasonEndScreen");
+  var html = '';
 
   html += '<div class="end-title">SEASON ' + state.season + ' COMPLETE</div>';
   html += '<div class="end-divider"></div>';
@@ -1526,8 +1705,8 @@ function showSeasonEndScreen(bestDeal, wageBill, repChange) {
 
 // ─── FINAL SCREEN ──────────────────────────────────────
 function showFinalScreen() {
-  const screen = document.getElementById("finalScreen");
-  let grade, gradeClass, tagline;
+  var screen = document.getElementById("finalScreen");
+  var grade, gradeClass, tagline;
 
   if (state.careerEarnings > 50000000) { grade = "S+"; gradeClass = "grade-S-plus"; tagline = "The Greatest Agent of All Time."; }
   else if (state.careerEarnings > 35000000) { grade = "S"; gradeClass = "grade-S"; tagline = "Legendary Agent \u2014 a name for the history books."; }
@@ -1537,10 +1716,10 @@ function showFinalScreen() {
   else { grade = "D"; gradeClass = "grade-D"; tagline = "Rookie Agent \u2014 try a different strategy!"; }
 
   // Find biggest deal
-  const allSales = state.seasonLog.filter(l => l.type === "sale");
-  const biggestDeal = allSales.length > 0 ? allSales.reduce((a, b) => a.amount > b.amount ? a : b) : null;
+  var allSales = state.seasonLog.filter(function(l) { return l.type === "sale"; });
+  var biggestDeal = allSales.length > 0 ? allSales.reduce(function(a, b) { return a.amount > b.amount ? a : b; }) : null;
 
-  let html = '';
+  var html = '';
   html += '<div style="font-size:14px;color:var(--muted);letter-spacing:4px;margin-bottom:4px;">CAREER COMPLETE</div>';
   html += '<div style="width:80px;height:2px;background:var(--accent);margin:8px auto 16px;"></div>';
 
@@ -1558,23 +1737,24 @@ function showFinalScreen() {
 
   html += '<button class="btn btn-primary" style="margin-top:16px;max-width:350px;" onclick="resetGame()">\u{1F504} PLAY AGAIN</button>';
 
-  const scoreText = state.agencyName + " | Grade: " + grade + " | Earnings: " + fmt(state.careerEarnings) + " | Players Sold: " + allSales.length;
+  var scoreText = state.agencyName + " | Grade: " + grade + " | Earnings: " + fmt(state.careerEarnings) + " | Players Sold: " + allSales.length;
   html += '<button class="btn btn-outline" style="margin-top:8px;max-width:350px;" onclick="navigator.clipboard.writeText(\'' + scoreText.replace(/'/g, "\\'") + '\');showToast(\'Score copied!\',\'success\')">\u{1F4CB} COPY SCORE</button>';
 
   screen.innerHTML = html;
   screen.classList.add("show");
   confettiBurst();
+  deleteSave();
 }
 
 // ─── GAME INIT ─────────────────────────────────────────
 function selectDifficulty(diff, el) {
-  document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("selected"));
+  document.querySelectorAll(".diff-btn").forEach(function(b) { b.classList.remove("selected"); });
   el.classList.add("selected");
   state.difficulty = diff;
 }
 
 function startGame() {
-  const nameInput = document.getElementById("agencyNameInput").value.trim();
+  var nameInput = document.getElementById("agencyNameInput").value.trim();
   state.agencyName = nameInput || "Star Agency";
 
   if (state.difficulty === "rookie") state.budget = 5000000;
@@ -1593,6 +1773,9 @@ function startGame() {
   state.ivan.reputation = 15;
   state.ivan.careerEarnings = 0;
   state.ivan.lastMove = "";
+  state.tutorialDismissed = false;
+  state.trainedThisSeason = false;
+  state.dealsThisSeason = false;
 
   pickWorldEvent();
   generateScoutPool();
@@ -1602,9 +1785,25 @@ function startGame() {
   document.getElementById("app").style.display = "flex";
   updateTopBar();
 
-  showSeasonTransition(1, () => {
+  saveGame();
+
+  showSeasonTransition(1, function() {
     showTab("hub");
   });
+}
+
+// FIX #3: Continue from save
+function continueGame() {
+  if (!loadGame()) return;
+
+  document.getElementById("splashScreen").classList.add("hidden");
+  document.getElementById("app").style.display = "flex";
+  updateTopBar();
+
+  // Update mute button state
+  document.getElementById("muteBtn").innerHTML = state.soundMuted ? "&#128263;" : "&#128266;";
+
+  showTab(state.currentTab || "hub");
 }
 
 function resetGame() {
@@ -1621,7 +1820,25 @@ function resetGame() {
   state.reputation = 10;
   state.playerIdCounter = 1;
   state.seasonResultShown = false;
+  state.tutorialDismissed = false;
+  state.trainedThisSeason = false;
+  state.dealsThisSeason = false;
+  deleteSave();
+  checkContinueButton();
 }
+
+// FIX #3: Show/hide continue button on splash based on save existence
+function checkContinueButton() {
+  var btn = document.getElementById("continueBtn");
+  if (hasSave()) {
+    btn.style.display = "block";
+  } else {
+    btn.style.display = "none";
+  }
+}
+
+// On page load, check for existing save
+checkContinueButton();
 </script>
 </body>
 </html>
