@@ -108,7 +108,7 @@ html, body {
 .player-card.tier-elite { border-left-color: #a855f7; }
 .player-card.tier-legend { border-left-color: #ef4444; }
 
-.player-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
 .player-name { font-weight: 700; font-size: 16px; }
 .player-pos { font-family: 'Bebas Neue', sans-serif; font-size: 14px; color: var(--accent); background: rgba(0,212,255,0.1); padding: 2px 8px; border-radius: 6px; }
 .player-meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
@@ -583,6 +583,106 @@ html, body {
   padding: 24px;
 }
 #lobbyScreen.show { display: flex; }
+
+/* ─── SAVE INDICATOR ──────────────────────────────────── */
+#saveIndicator {
+  position: fixed; top: 58px; right: 12px; z-index: 160;
+  font-size: 11px; color: var(--green); opacity: 0;
+  transition: opacity 0.3s; pointer-events: none;
+  font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px;
+}
+#saveIndicator.show { opacity: 1; }
+
+/* ─── BE A PRO MODE ──────────────────────────────────── */
+.pro-card {
+  background: linear-gradient(135deg, rgba(255,215,0,0.06), var(--surface));
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 20px; padding: 24px 16px;
+  text-align: center; margin-bottom: 16px;
+}
+.pro-card .pro-rating {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 64px; color: var(--gold);
+  line-height: 1;
+}
+.pro-card .pro-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 1px; margin-top: 4px;
+}
+.pro-card .pro-club {
+  font-size: 14px; color: var(--muted); margin-top: 4px;
+}
+.pro-card .pro-pos-badge {
+  display: inline-block; font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px; color: var(--accent); background: rgba(0,212,255,0.1);
+  padding: 2px 12px; border-radius: 6px; margin-top: 8px;
+}
+.pro-skill-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0; font-size: 13px;
+}
+.pro-skill-bar .skill-label { width: 72px; color: var(--muted); text-align: right; }
+.pro-skill-bar .skill-track {
+  flex: 1; height: 10px; background: var(--surface2);
+  border-radius: 5px; overflow: hidden;
+}
+.pro-skill-bar .skill-fill {
+  height: 100%; border-radius: 5px;
+  transition: width 0.6s ease-out;
+}
+.pro-skill-bar .skill-val {
+  width: 28px; font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; text-align: left;
+}
+.pro-offer-card {
+  background: var(--surface);
+  border-radius: 16px; border: 1px solid var(--border);
+  padding: 16px; margin-bottom: 12px;
+}
+.pro-offer-card .club-name {
+  font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+}
+.pro-offer-card .salary {
+  font-family: 'Bebas Neue', sans-serif; font-size: 24px;
+  color: var(--green); margin: 6px 0;
+}
+.pro-setup-pos {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin: 12px 0;
+}
+.pro-setup-pos .pos-btn {
+  min-height: 44px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; cursor: pointer; transition: all 0.2s;
+}
+.pro-setup-pos .pos-btn.selected {
+  border-color: var(--accent); background: rgba(0,212,255,0.15);
+  color: var(--accent);
+}
+.pro-nat-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+  margin: 12px 0;
+}
+.pro-nat-grid .nat-btn {
+  min-height: 44px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  font-size: 22px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.pro-nat-grid .nat-btn.selected {
+  border-color: var(--accent); background: rgba(0,212,255,0.15);
+}
+.pro-history-table {
+  width: 100%; font-size: 12px; border-collapse: collapse;
+}
+.pro-history-table th {
+  color: var(--muted); font-weight: 600; padding: 6px 4px;
+  text-align: left; border-bottom: 1px solid var(--border);
+}
+.pro-history-table td {
+  padding: 6px 4px; border-bottom: 1px solid rgba(30,58,95,0.3);
+}
 </style>
 </head>
 <body>
@@ -602,7 +702,11 @@ html, body {
   <button class="btn btn-continue" id="reconnectBtn" style="max-width:320px;display:none;border-color:var(--green);color:var(--green);" onclick="reconnectMultiplayer()">&#127918; RECONNECT TO MATCH</button>
   <button class="btn btn-primary btn-pulse" style="max-width:320px;" onclick="startGame()">START CAREER</button>
   <button class="btn btn-outline" style="max-width:320px;margin-top:8px;" onclick="showModeSelector()">&#127918; PLAY ONLINE</button>
+  <button class="btn btn-outline" style="max-width:320px;margin-top:8px;border-color:var(--gold);color:var(--gold);" onclick="showProSetup()">&#9917; BE A PRO</button>
 </div>
+
+<!-- SAVE INDICATOR -->
+<div id="saveIndicator">&#128190; SAVED</div>
 
 <!-- TOAST CONTAINER -->
 <div id="toastContainer"></div>
@@ -688,6 +792,9 @@ const state = {
   soundMuted: false,
   soldPlayers: [],
   johnPedroSeen: false,
+  // Career mode
+  careerMode: "agent",   // "agent" | "player"
+  pro: null,
   // Multiplayer
   gameMode: "solo",        // "solo" | "multiplayer"
   matchId: null,
@@ -866,41 +973,205 @@ function toggleMute() {
   saveGame();
 }
 
-// ─── FIX #3: SAVE/LOAD (localStorage) ──────────────────
-function saveGame() {
+// ─── PERSISTENT SAVE/LOAD (IndexedDB + localStorage) ───
+var idbDb = null;
+var autoSaveInterval = null;
+
+function initIndexedDB(callback) {
   try {
-    if (isMultiplayer()) {
-      localStorage.setItem('fat_mp_state', JSON.stringify(state));
-      syncToFirebase();
-    } else {
-      localStorage.setItem('fat_save', JSON.stringify(state));
-    }
+    var request = indexedDB.open('fat_game', 1);
+    request.onupgradeneeded = function(e) {
+      e.target.result.createObjectStore('saves');
+    };
+    request.onsuccess = function(e) {
+      idbDb = e.target.result;
+      if (callback) callback(true);
+    };
+    request.onerror = function() {
+      if (callback) callback(false);
+    };
+  } catch(e) {
+    if (callback) callback(false);
+  }
+}
+
+function idbSave(key, data) {
+  if (!idbDb) return;
+  try {
+    var tx = idbDb.transaction('saves', 'readwrite');
+    tx.objectStore('saves').put(data, key);
   } catch(e) {}
 }
 
+function idbLoad(key, callback) {
+  if (!idbDb) { callback(null); return; }
+  try {
+    var tx = idbDb.transaction('saves', 'readonly');
+    var req = tx.objectStore('saves').get(key);
+    req.onsuccess = function() { callback(req.result || null); };
+    req.onerror = function() { callback(null); };
+  } catch(e) { callback(null); }
+}
+
+function idbDelete(key) {
+  if (!idbDb) return;
+  try {
+    var tx = idbDb.transaction('saves', 'readwrite');
+    tx.objectStore('saves').delete(key);
+  } catch(e) {}
+}
+
+function showSaveIndicator() {
+  var el = document.getElementById('saveIndicator');
+  if (!el) return;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(function() { el.classList.remove('show'); }, 1500);
+}
+
+function saveGame() {
+  var data = JSON.stringify(state);
+  var key = isMultiplayer() ? 'fat_mp_state' : 'fat_save';
+  var saved = false;
+
+  // localStorage (fast, synchronous)
+  try {
+    localStorage.setItem(key, data);
+    saved = true;
+  } catch(e) {}
+
+  // IndexedDB (more persistent on mobile)
+  idbSave(key, data);
+
+  if (isMultiplayer()) syncToFirebase();
+
+  // Visual feedback
+  if (state.season > 0) showSaveIndicator();
+
+  if (!saved && !idbDb) {
+    showToast("\u26A0\uFE0F Save failed! Use Export to backup.", "error");
+  }
+}
+
+function applyLoadedState(s) {
+  var parsed = typeof s === 'string' ? JSON.parse(s) : s;
+  Object.assign(state, parsed);
+  // Backward compat for new fields
+  if (!state.soldPlayers) state.soldPlayers = [];
+  if (state.johnPedroSeen === undefined) state.johnPedroSeen = false;
+  if (!state.gameMode) state.gameMode = "solo";
+  if (!state.careerMode) state.careerMode = "agent";
+  if (!state.opponent) state.opponent = { name:"", season:0, budget:0, reputation:0, careerEarnings:0, rosterCount:0, rosterTopRating:0, lastMove:"", finished:false, finalGrade:null, finalEarnings:null };
+}
+
 function loadGame() {
+  // Try localStorage first (synchronous)
   try {
     var s = localStorage.getItem('fat_save');
     if (s) {
-      var parsed = JSON.parse(s);
-      Object.assign(state, parsed);
-      // Backward compat for new fields
-      if (!state.soldPlayers) state.soldPlayers = [];
-      if (state.johnPedroSeen === undefined) state.johnPedroSeen = false;
-      if (!state.gameMode) state.gameMode = "solo";
-      if (!state.opponent) state.opponent = { name:"", season:0, budget:0, reputation:0, careerEarnings:0, rosterCount:0, rosterTopRating:0, lastMove:"", finished:false, finalGrade:null, finalEarnings:null };
+      applyLoadedState(s);
       return true;
     }
   } catch(e) {}
   return false;
 }
 
+// Async load from IndexedDB (fallback if localStorage empty)
+function loadGameAsync(callback) {
+  // Try localStorage first
+  try {
+    var s = localStorage.getItem('fat_save');
+    if (s) {
+      applyLoadedState(s);
+      callback(true);
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback to IndexedDB
+  idbLoad('fat_save', function(data) {
+    if (data) {
+      applyLoadedState(data);
+      // Re-save to localStorage for next time
+      try { localStorage.setItem('fat_save', data); } catch(e) {}
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+}
+
 function hasSave() {
-  return !!localStorage.getItem('fat_save');
+  try { return !!localStorage.getItem('fat_save'); } catch(e) { return false; }
+}
+
+function hasSaveAsync(callback) {
+  if (hasSave()) { callback(true); return; }
+  idbLoad('fat_save', function(data) { callback(!!data); });
 }
 
 function deleteSave() {
-  localStorage.removeItem('fat_save');
+  try { localStorage.removeItem('fat_save'); } catch(e) {}
+  idbDelete('fat_save');
+}
+
+function startAutoSave() {
+  if (autoSaveInterval) clearInterval(autoSaveInterval);
+  autoSaveInterval = setInterval(function() {
+    if (state.season > 0 && (state.agencyName || state.pro)) saveGame();
+  }, 30000);
+}
+
+function stopAutoSave() {
+  if (autoSaveInterval) { clearInterval(autoSaveInterval); autoSaveInterval = null; }
+}
+
+// Export/Import save data
+function exportSave() {
+  try {
+    var data = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(data).then(function() {
+        showToast("\u{1F4CB} Save code copied!", "success");
+      }).catch(function() { showExportSheet(data); });
+    } else {
+      showExportSheet(data);
+    }
+  } catch(e) {
+    showToast("Export failed!", "error");
+  }
+}
+
+function showExportSheet(data) {
+  var html = '<div class="sheet-title">EXPORT SAVE</div>';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Copy this code and save it somewhere safe:</div>';
+  html += '<textarea id="exportData" style="width:100%;height:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;resize:none;" readonly>' + data + '</textarea>';
+  html += '<button class="btn btn-primary" style="margin-top:12px;" onclick="document.getElementById(\'exportData\').select();document.execCommand(\'copy\');showToast(\'Copied!\',\'success\');">COPY CODE</button>';
+  openBottomSheet(html);
+}
+
+function promptImportSave() {
+  var html = '<div class="sheet-title">IMPORT SAVE</div>';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste your save code below:</div>';
+  html += '<textarea id="importData" style="width:100%;height:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;resize:none;" placeholder="Paste save code here..."></textarea>';
+  html += '<button class="btn btn-green" style="margin-top:12px;" onclick="importSave()">LOAD SAVE</button>';
+  openBottomSheet(html);
+}
+
+function importSave() {
+  try {
+    var raw = document.getElementById('importData').value.trim();
+    var json = decodeURIComponent(escape(atob(raw)));
+    var parsed = JSON.parse(json);
+    Object.assign(state, parsed);
+    saveGame();
+    closeBottomSheet();
+    updateTopBar();
+    renderCurrentTab();
+    showToast("\u2705 Save imported!", "success");
+  } catch(e) {
+    showToast("\u274C Invalid save code!", "error");
+  }
 }
 
 // ─── PLAYER VALUE ──────────────────────────────────────
@@ -1178,11 +1449,13 @@ function acceptOffer(offerId) {
   });
 
   // Track sold player for Match Day
+  var soldPlayerObj = state.roster.find(function(p) { return p.id === offer.playerId; }) || player;
   state.soldPlayers.push({
     name: offer.playerName,
     club: offer.club.name,
     rating: offer.playerRating,
-    season: state.season
+    season: state.season,
+    lastTrainingType: soldPlayerObj ? soldPlayerObj.lastTrainingType : null
   });
 
   showToast("\u{1F4B0} DEAL DONE! +" + fmt(totalIncome) + " earned!", "success");
@@ -1389,6 +1662,15 @@ function advanceToNextSeason() {
 
 // ─── UI RENDERING ──────────────────────────────────────
 function updateTopBar() {
+  if (state.careerMode === "player" && state.pro) {
+    document.getElementById("topAgency").innerHTML = state.pro.firstName + ' ' + state.pro.lastName;
+    document.getElementById("topSeason").textContent = "Age " + state.pro.age + " \u00B7 Season " + state.season;
+    var budgetEl = document.getElementById("topBudget");
+    budgetEl.textContent = fmt(state.pro.salary);
+    budgetEl.style.color = "var(--green)";
+    document.getElementById("topRep").textContent = "\u2B50 " + state.pro.rating + " OVR";
+    return;
+  }
   document.getElementById("topAgency").innerHTML = state.agencyName + (isMultiplayer() ? ' <span class="mp-badge">LIVE</span>' : '');
   document.getElementById("topSeason").textContent = "Season " + state.season + "/10";
   var budgetEl = document.getElementById("topBudget");
@@ -1406,6 +1688,16 @@ function showTab(tab) {
 
 function renderCurrentTab() {
   var c = document.getElementById("content");
+  if (state.careerMode === "player") {
+    switch (state.currentTab) {
+      case "hub": c.innerHTML = renderProHub(); break;
+      case "train": c.innerHTML = renderProTrain(); break;
+      case "match": c.innerHTML = renderProMatch(); break;
+      case "offers": c.innerHTML = renderProOffers(); break;
+      case "stats": c.innerHTML = renderProStats(); break;
+    }
+    return;
+  }
   switch (state.currentTab) {
     case "hub": c.innerHTML = renderHub(); break;
     case "scout": c.innerHTML = renderScout(); break;
@@ -1518,6 +1810,12 @@ function renderHub() {
     html += '</div>';
   }
 
+  // Save management
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+  html += '<button class="btn btn-outline" style="flex:1;font-size:12px;padding:8px;" onclick="exportSave()">\u{1F4E4} Export Save</button>';
+  html += '<button class="btn btn-outline" style="flex:1;font-size:12px;padding:8px;" onclick="promptImportSave()">\u{1F4E5} Import Save</button>';
+  html += '</div>';
+
   // End Season button
   html += '<button class="btn btn-gold btn-pulse" onclick="endSeason()" style="margin-top:8px;">END SEASON \u27A1\uFE0F</button>';
 
@@ -1564,7 +1862,8 @@ function renderPlayerCardScout(p, idx) {
   var specialClass = p.special ? ' card-special' : '';
   var html = '<div class="player-card ' + tierClass + specialClass + ' card-flip" style="animation-delay:' + (idx * 0.08) + 's">';
   html += '<div class="player-header">';
-  html += '<div><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName;
+  html += '<img src="' + ensureAvatar(p) + '" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;" alt="">';
+  html += '<div style="flex:1;min-width:0;"><div class="player-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName;
   if (p.special) html += ' <span style="color:var(--gold);font-size:12px;">\u{1F48E} SPECIAL</span>';
   html += '</div>';
   html += '<div class="player-meta">Age ' + p.age + ' \u00B7 ' + (NAT_LABELS[p.nationality] || p.nationality) + '</div></div>';
@@ -1633,8 +1932,10 @@ function renderTrain() {
   state.roster.forEach(function(p) {
     var tierClass = getTierClass(p.rating);
     html += '<div class="player-card ' + tierClass + '" style="padding:12px;">';
-    html += '<div style="font-weight:600;font-size:14px;">' + p.flag + ' ' + p.firstName + '</div>';
-    html += '<div style="font-size:12px;color:var(--muted);">' + p.position + ' \u00B7 Age ' + p.age + '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+    html += '<img src="' + ensureAvatar(p) + '" style="width:36px;height:36px;border-radius:8px;" alt="">';
+    html += '<div><div style="font-weight:600;font-size:14px;">' + p.flag + ' ' + p.firstName + '</div>';
+    html += '<div style="font-size:12px;color:var(--muted);">' + p.position + ' \u00B7 Age ' + p.age + '</div></div></div>';
     html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin:4px 0;">' + p.rating + '</div>';
     html += '<div>' + moodEmoji(p.mood) + ' ' + p.mood.charAt(0).toUpperCase() + p.mood.slice(1);
     if (p.injured) html += ' <span class="injury-badge">\u{1FA79} Injured</span>';
@@ -1757,9 +2058,9 @@ function renderSquad() {
     var val = calcValue(p);
     html += '<div class="squad-row" onclick="openPlayerDetail(' + p.id + ')">';
     html += '<div style="display:flex;align-items:center;gap:10px;">';
-    html += '<div>' + p.flag + '</div>';
+    html += '<img src="' + ensureAvatar(p) + '" style="width:36px;height:36px;border-radius:8px;" alt="">';
     html += '<div>';
-    html += '<div style="font-weight:600;font-size:14px;">' + p.firstName + ' ' + p.lastName + '</div>';
+    html += '<div style="font-weight:600;font-size:14px;">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
     html += '<div style="font-size:12px;color:var(--muted);">' + p.position + ' \u00B7 ' + p.age + 'y' + (p.injured ? ' \u{1FA79}' : '') + '</div>';
     html += '</div></div>';
     html += '<div style="text-align:right;">';
@@ -2019,8 +2320,154 @@ function getCanvasXY(e, canvas) {
   };
 }
 
+// ─── PROCEDURAL PLAYER AVATARS ──────────────────────────
+function hashString(str) {
+  var h = 0;
+  for (var i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
+  return Math.abs(h);
+}
+
+var SKIN_TONES = {
+  brazil:'#C68642', argentina:'#E0AC69', england:'#F5D6BA', france:'#8D5524',
+  spain:'#E0AC69', germany:'#F5D6BA', portugal:'#C68642', italy:'#E0AC69',
+  netherlands:'#F5D6BA', serbia:'#F1C27D'
+};
+var JERSEY_COLORS = {
+  brazil:'#FFDF00', argentina:'#75AADB', england:'#fff', france:'#002395',
+  spain:'#AA151B', germany:'#000', portugal:'#006600', italy:'#0066CC',
+  netherlands:'#FF6600', serbia:'#C6363C'
+};
+var HAIR_STYLES = ['short','spiky','curly','buzz','mohawk'];
+var HAIR_COLORS = ['#1a1a1a','#4a3728','#8B4513','#D4A017','#C0392B'];
+
+function drawPlayerAvatar(ctx, x, y, s, seed, nat) {
+  var skin = SKIN_TONES[nat] || '#E0AC69';
+  var jersey = JERSEY_COLORS[nat] || '#333';
+  var hairIdx = seed % HAIR_STYLES.length;
+  var hairClr = HAIR_COLORS[(seed >> 3) % HAIR_COLORS.length];
+  var headR = s * 0.32;
+
+  // Jersey body
+  ctx.fillStyle = jersey;
+  var bTop = y + s * 0.08;
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.28, bTop + s * 0.12);
+  ctx.quadraticCurveTo(x, bTop - s * 0.02, x + s * 0.28, bTop + s * 0.12);
+  ctx.lineTo(x + s * 0.28, y + s * 0.5);
+  ctx.lineTo(x - s * 0.28, y + s * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  // Jersey number
+  var num = (seed % 90) + 1;
+  ctx.fillStyle = jersey === '#fff' || jersey === '#FFDF00' ? '#333' : '#fff';
+  ctx.font = 'bold ' + Math.round(s * 0.16) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(num, x, y + s * 0.3);
+
+  // Head
+  var headY = y - s * 0.12;
+  ctx.beginPath();
+  ctx.arc(x, headY, headR, 0, Math.PI * 2);
+  ctx.fillStyle = skin;
+  ctx.fill();
+
+  // Hair
+  ctx.fillStyle = hairClr;
+  var hs = HAIR_STYLES[hairIdx];
+  if (hs === 'short') {
+    ctx.beginPath(); ctx.arc(x, headY - headR * 0.15, headR * 1.05, Math.PI, 0); ctx.fill();
+  } else if (hs === 'spiky') {
+    for (var i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + i * headR * 0.35 - headR * 0.1, headY - headR * 0.7);
+      ctx.lineTo(x + i * headR * 0.35, headY - headR * 1.25);
+      ctx.lineTo(x + i * headR * 0.35 + headR * 0.1, headY - headR * 0.7);
+      ctx.fill();
+    }
+  } else if (hs === 'curly') {
+    for (var j = 0; j < 7; j++) {
+      var angle = Math.PI + (j / 6) * Math.PI;
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(angle) * headR * 0.85, headY + Math.sin(angle) * headR * 0.85, headR * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (hs === 'buzz') {
+    ctx.beginPath(); ctx.arc(x, headY - headR * 0.1, headR * 1.02, Math.PI, 0); ctx.fill();
+  } else if (hs === 'mohawk') {
+    ctx.fillRect(x - headR * 0.12, headY - headR * 1.4, headR * 0.24, headR * 1.0);
+  }
+
+  // Eyes
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(x - headR * 0.3, headY - headR * 0.05, headR * 0.08, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + headR * 0.3, headY - headR * 0.05, headR * 0.08, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth
+  ctx.beginPath();
+  ctx.arc(x, headY + headR * 0.35, headR * 0.2, 0.1 * Math.PI, 0.9 * Math.PI);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function generateAvatarUrl(player) {
+  var c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  var ctx = c.getContext('2d');
+  var seed = hashString((player.firstName || '') + (player.lastName || '') + (player.nationality || ''));
+  // Background circle
+  ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2);
+  ctx.fillStyle = 'var(--surface2)' === 'var(--surface2)' ? '#1e2a3a' : '#1e2a3a';
+  ctx.fill();
+  drawPlayerAvatar(ctx, 32, 28, 52, seed, player.nationality);
+  return c.toDataURL('image/png');
+}
+
+function ensureAvatar(player) {
+  if (!player.avatarUrl) player.avatarUrl = generateAvatarUrl(player);
+  return player.avatarUrl;
+}
+
 // ─── TRAINING MINI-GAMES ────────────────────────────────
 var activeGame = null;
+
+// ─── TRAINING CONTEXT NARRATIVES ─────────────────────────
+var TRAINING_CONTEXTS = {
+  shooting: [
+    "Coach wants {player} to sharpen finishing before the match against {opponent}.",
+    "The scouts are watching today. A clinical display could attract bigger clubs.",
+    "{player} is hungry for goals. Time to prove those shooting boots work.",
+    "World Cup qualifiers are coming. Finishing drills are top priority.",
+    "After a quiet last match, {player} needs to find the back of the net."
+  ],
+  passing: [
+    "The gaffer demands faster build-up play. {player} is drilling one-touch passes.",
+    "A Champions League scout is visiting. Midfield vision is key today.",
+    "{player} works on through-balls with the first team ahead of {opponent} clash.",
+    "New formation needs sharper passing. Every ball must find its target.",
+    "Rain-soaked pitch today. Precision passing will be essential."
+  ],
+  dribble: [
+    "{player} faces a gauntlet of cones. Beat them all and impress the staff.",
+    "The academy coaches want to see close control under pressure.",
+    "{opponent}'s defender is notoriously physical. Agility training is crucial.",
+    "Flair and skill moves trending on social media. Time to put on a show.",
+    "Tight spaces ahead. If {player} can beat these cones, match day will be a breeze."
+  ]
+};
+
+function getTrainingContext(player, gameType) {
+  var templates = TRAINING_CONTEXTS[gameType] || TRAINING_CONTEXTS.shooting;
+  var template = pick(templates);
+  var opponent = state.clubOffers.length > 0 ? state.clubOffers[0].club.name : pick(CLUBS).name;
+  // World event flavor
+  if (state.worldEvent) {
+    if (state.worldEvent.type === "injury_up") template += " \u26A0\uFE0F Watch out \u2014 injury risk is high this season.";
+    if (state.worldEvent.type === "flashy_boost") template += " \u{1F4F1} Social media scouts are watching every move!";
+  }
+  return template.replace(/\{player\}/g, player.firstName).replace(/\{opponent\}/g, opponent);
+}
 
 function launchMiniGame(playerId, gameType) {
   var player = state.roster.find(function(p) { return p.id === playerId; });
@@ -2036,27 +2483,55 @@ function launchMiniGame(playerId, gameType) {
   state.budget -= cost;
   updateTopBar();
 
-  var html = '<div class="mini-game-container">';
-  html += '<div class="sheet-title">' + gameType.toUpperCase() + ' TRAINING</div>';
-  html += '<div class="mini-game-hud"><span id="mgScore">Score: 0</span><span id="mgTimer">Time: --</span></div>';
-  html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="mgTimerBar" style="width:100%"></div></div>';
-  html += '<canvas id="trainCanvas" width="340" height="400"></canvas>';
-  html += '</div>';
+  // Show training context brief first
+  var context = getTrainingContext(player, gameType);
+  var posBonus = getPositionBonus(player.position, gameType);
+  var bonusText = posBonus > 1 ? '<div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:600;">\u{1F4AA} Position bonus: ' + Math.round((posBonus - 1) * 100) + '% extra boost (' + player.position + ' + ' + gameType + ')</div>' : '';
 
-  openBottomSheet(html);
+  var briefHtml = '<div style="text-align:center;padding:20px 16px;">';
+  briefHtml += '<div style="font-size:11px;color:var(--gold);letter-spacing:2px;font-family:\'Bebas Neue\',sans-serif;margin-bottom:8px;">TRAINING BRIEF</div>';
+  briefHtml += '<div style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;">' + context + '</div>';
+  briefHtml += bonusText;
+  briefHtml += '<button class="btn btn-primary btn-pulse" style="margin-top:16px;max-width:280px;" id="startTrainingBtn">\u26BD BEGIN TRAINING</button>';
+  briefHtml += '</div>';
 
-  setTimeout(function() {
-    var canvas = document.getElementById('trainCanvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    if (gameType === 'shooting') miniGameShooting(canvas, ctx, player);
-    else if (gameType === 'passing') miniGamePassing(canvas, ctx, player);
-    else if (gameType === 'dribble') miniGameDribble(canvas, ctx, player);
-  }, 100);
+  openBottomSheet(briefHtml);
+
+  document.getElementById('startTrainingBtn').addEventListener('click', function() {
+    var html = '<div class="mini-game-container">';
+    html += '<div class="sheet-title">' + gameType.toUpperCase() + ' TRAINING</div>';
+    html += '<div class="mini-game-hud"><span id="mgScore">Score: 0</span><span id="mgTimer">Time: --</span></div>';
+    html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="mgTimerBar" style="width:100%"></div></div>';
+    html += '<canvas id="trainCanvas" width="340" height="400"></canvas>';
+    html += '</div>';
+
+    document.getElementById('sheetContent').innerHTML = html;
+
+    setTimeout(function() {
+      var canvas = document.getElementById('trainCanvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      // Store gameType on player for result processing
+      player._currentGameType = gameType;
+      if (gameType === 'shooting') miniGameShooting(canvas, ctx, player);
+      else if (gameType === 'passing') miniGamePassing(canvas, ctx, player);
+      else if (gameType === 'dribble') miniGameDribble(canvas, ctx, player);
+    }, 100);
+  });
+}
+
+function getPositionBonus(position, gameType) {
+  if (gameType === 'shooting' && position === 'FWD') return 1.5;
+  if (gameType === 'passing' && position === 'MID') return 1.5;
+  if (gameType === 'dribble' && (position === 'MID' || position === 'FWD')) return 1.3;
+  if (gameType === 'shooting' && position === 'MID') return 1.2;
+  if (gameType === 'dribble' && position === 'DEF') return 1.2;
+  return 1;
 }
 
 function applyTrainingResult(player, score, maxScore) {
   var pct = maxScore > 0 ? (score / maxScore) : 0;
+  var gameType = player._currentGameType || 'shooting';
   var gain = 0;
   if (pct > 0.8) gain = rand(3, 5);
   else if (pct > 0.5) gain = rand(2, 3);
@@ -2065,12 +2540,22 @@ function applyTrainingResult(player, score, maxScore) {
   // Mood modifier
   if (player.mood === "unhappy") gain = Math.max(0, gain - 1);
 
+  // Position bonus
+  var posBonus = getPositionBonus(player.position, gameType);
+  var baseGain = gain;
+  gain = Math.round(gain * posBonus);
+
   var oldRating = player.rating;
   player.rating = clamp(player.rating + gain, 0, player.potentialRating);
   player.seasonsNotTrained = 0;
+  player.lastTrainingType = gameType;
+  player.lastTrainingScore = pct;
   state.trainedThisSeason = true;
   if (player.mood === "unhappy") player.mood = "neutral";
   else if (player.mood === "neutral") player.mood = "happy";
+  delete player._currentGameType;
+
+  var bonusNote = posBonus > 1 ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">\u{1F4AA} Position bonus applied! (' + player.position + ' +' + Math.round((posBonus - 1) * 100) + '%)</div>' : '';
 
   var resultHTML = '<div class="mini-game-result">';
   resultHTML += '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">TRAINING COMPLETE</div>';
@@ -2079,6 +2564,7 @@ function applyTrainingResult(player, score, maxScore) {
   if (gain > 0) {
     resultHTML += '<div style="font-size:24px;color:var(--green);font-weight:700;">+' + (player.rating - oldRating) + ' RATING!</div>';
     resultHTML += '<div style="font-size:14px;color:var(--muted);">' + oldRating + ' \u2192 ' + player.rating + '</div>';
+    resultHTML += bonusNote;
   } else {
     resultHTML += '<div style="font-size:16px;color:var(--muted);">No improvement this time</div>';
   }
@@ -2350,24 +2836,53 @@ function miniGamePassing(canvas, ctx, player) {
 // ─── MINI-GAME: DRIBBLE RUN ────────────────────────────
 function miniGameDribble(canvas, ctx, player) {
   var w = canvas.width, h = canvas.height;
-  var playerX = w / 2, laneW = 80;
-  var cones = [], score = 0, missed = 0, totalCones = 0;
+  var laneW = 80;
+  var currentLane = 0; // -1 = left, 0 = center, 1 = right
+  var playerX = w / 2;
+  var cones = [], coins = [];
+  var score = 0, missed = 0, totalCones = 0;
+  var coinsCollected = 0, coinsMissed = 0;
   var timeLeft = 10000, startTime = Date.now();
   var coneSpeed = 2;
-  var lastCone = 0;
+  var lastCone = 0, lastCoin = 0;
+  var flashTimer = 0; // screen flash on hit
 
   function spawnCone() {
+    var elapsed = Date.now() - startTime;
+    // After 3s, 30% chance of double cone (only 1 safe lane)
+    if (elapsed > 3000 && Math.random() < 0.3) {
+      var lanes = [-1, 0, 1];
+      var safe = pick(lanes);
+      for (var i = 0; i < lanes.length; i++) {
+        if (lanes[i] !== safe) {
+          cones.push({ x: w / 2 + lanes[i] * laneW, y: -20, passed: false });
+          totalCones++;
+        }
+      }
+    } else {
+      var lane = pick([-1, 0, 1]);
+      cones.push({ x: w / 2 + lane * laneW, y: -20, passed: false });
+      totalCones++;
+    }
+  }
+
+  function spawnCoin() {
     var lane = pick([-1, 0, 1]);
-    cones.push({ x: w / 2 + lane * laneW, y: -20, passed: false });
-    totalCones++;
+    coins.push({ x: w / 2 + lane * laneW, y: -20, collected: false, missed: false });
   }
 
   function draw() {
     // Pitch background
     ctx.fillStyle = '#2d8b2d';
     ctx.fillRect(0, 0, w, h);
+    // Hit flash overlay
+    if (flashTimer > 0) {
+      ctx.fillStyle = 'rgba(255,50,50,' + (flashTimer * 0.3) + ')';
+      ctx.fillRect(0, 0, w, h);
+      flashTimer = Math.max(0, flashTimer - 0.05);
+    }
     // Lane lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     ctx.setLineDash([10, 10]);
     for (var i = -1; i <= 1; i++) {
@@ -2377,12 +2892,32 @@ function miniGameDribble(canvas, ctx, player) {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    // Lane highlights (subtle glow on current lane)
+    ctx.fillStyle = 'rgba(0,212,255,0.06)';
+    ctx.fillRect(playerX - laneW / 2, 0, laneW, h);
+    // Coins (gold circles)
+    coins.forEach(function(c) {
+      if (c.collected || c.missed) return;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFD700';
+      ctx.fill();
+      ctx.strokeStyle = '#DAA520';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('\u26BD', c.x, c.y);
+    });
     // Cones
     cones.forEach(function(c) {
       if (c.passed) return;
       ctx.font = '24px serif';
       ctx.textAlign = 'center';
-      ctx.fillText('\u{1F9E7}', c.x, c.y + 8);
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText('\u{1F6A7}', c.x, c.y + 8);
     });
     // Player
     ctx.beginPath();
@@ -2397,6 +2932,12 @@ function miniGameDribble(canvas, ctx, player) {
     ctx.arc(playerX + 8, h - 48, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
+    // Coin counter
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('\u26BD\u00D7' + coinsCollected, w - 8, 8);
   }
 
   function update() {
@@ -2404,23 +2945,31 @@ function miniGameDribble(canvas, ctx, player) {
     timeLeft = Math.max(0, 10000 - elapsed);
     var pct = timeLeft / 10000;
 
-    // Speed increases
-    coneSpeed = 2 + elapsed / 3000;
+    // Speed increases over time
+    coneSpeed = 2 + elapsed / 2500;
 
-    // Spawn cones
-    if (elapsed - lastCone > 600) {
+    // Spawn cones (rate increases)
+    var spawnInterval = Math.max(350, 600 - elapsed / 25);
+    if (elapsed - lastCone > spawnInterval) {
       spawnCone();
       lastCone = elapsed;
+    }
+
+    // Spawn coins every 1.2s
+    if (elapsed - lastCoin > 1200) {
+      spawnCoin();
+      lastCoin = elapsed;
     }
 
     // Move cones
     cones.forEach(function(c) {
       if (c.passed) return;
       c.y += coneSpeed;
-      // Check collision with player
-      if (c.y > h - 80 && c.y < h - 40 && Math.abs(c.x - playerX) < 30) {
+      // Collision — exact lane match (playerX is always snapped)
+      if (c.y > h - 80 && c.y < h - 40 && Math.abs(c.x - playerX) < 35) {
         c.passed = true;
         missed++;
+        flashTimer = 1;
         playSound('error');
       }
       // Passed safely
@@ -2430,17 +2979,42 @@ function miniGameDribble(canvas, ctx, player) {
       }
     });
 
+    // Move coins
+    coins.forEach(function(c) {
+      if (c.collected || c.missed) return;
+      c.y += coneSpeed * 0.85;
+      // Collect check
+      if (c.y > h - 80 && c.y < h - 40 && Math.abs(c.x - playerX) < 35) {
+        c.collected = true;
+        coinsCollected++;
+        playSound('success');
+      }
+      // Missed
+      if (c.y > h - 20 && !c.collected) {
+        c.missed = true;
+        coinsMissed++;
+      }
+    });
+
     draw();
-    document.getElementById('mgScore').textContent = 'Dodged: ' + score;
+    document.getElementById('mgScore').textContent = 'Dodged: ' + score + '  \u26BD' + coinsCollected;
     document.getElementById('mgTimer').textContent = (timeLeft / 1000).toFixed(1) + 's';
     document.getElementById('mgTimerBar').style.width = (pct * 100) + '%';
 
     if (timeLeft <= 0) {
-      var total = score + missed;
-      setTimeout(function() { applyTrainingResult(player, score, Math.max(total, 1)); }, 500);
+      // Score = dodged cones + coins collected, penalized by misses
+      var goodPoints = score + coinsCollected * 2;
+      var totalPoints = goodPoints + missed + coinsMissed;
+      setTimeout(function() { applyTrainingResult(player, goodPoints, Math.max(totalPoints, 1)); }, 500);
       return;
     }
     activeGame = requestAnimationFrame(update);
+  }
+
+  // Controls: snap to discrete lanes (no intermediate positions)
+  function moveToLane(lane) {
+    currentLane = clamp(lane, -1, 1);
+    playerX = w / 2 + currentLane * laneW;
   }
 
   var touchStartX = null;
@@ -2453,15 +3027,14 @@ function miniGameDribble(canvas, ctx, player) {
     var pt = getCanvasXY(e, canvas);
     if (touchStartX !== null) {
       var diff = pt.x - touchStartX;
-      playerX = clamp(playerX + diff, w / 2 - laneW, w / 2 + laneW);
-      touchStartX = pt.x;
+      if (diff > 30) { moveToLane(currentLane + 1); touchStartX = pt.x; }
+      else if (diff < -30) { moveToLane(currentLane - 1); touchStartX = pt.x; }
     }
   }
   function onClick(e) {
     var pt = getCanvasXY(e, canvas);
-    // Tap left/right to move
-    if (pt.x < w / 3) playerX = clamp(playerX - laneW, w / 2 - laneW, w / 2 + laneW);
-    else if (pt.x > w * 2 / 3) playerX = clamp(playerX + laneW, w / 2 - laneW, w / 2 + laneW);
+    if (pt.x < w / 3) moveToLane(currentLane - 1);
+    else if (pt.x > w * 2 / 3) moveToLane(currentLane + 1);
   }
 
   canvas.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -2600,13 +3173,15 @@ function runMatchSimulation(canvas, ctx, soldPlayer, opponent) {
         // Your player scores!
         homeScore++;
         yourPlayerGoals++;
-        addCommentary(Math.floor(minute) + "' \u26BD GOAL! " + soldPlayer.name + " scores for " + soldPlayer.club + "!", 'goal-event');
+        var goalNote = soldPlayer.lastTrainingType === 'shooting' ? " His shooting drills paid off!" : "";
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! " + soldPlayer.name + " scores for " + soldPlayer.club + "!" + goalNote, 'goal-event');
         playSound('sell');
       } else if (eventRoll < 0.35) {
         // Your player assist
         homeScore++;
         yourPlayerAssists++;
-        addCommentary(Math.floor(minute) + "' \u26BD GOAL! Assisted by " + soldPlayer.name + "!", 'goal-event');
+        var assistNote = soldPlayer.lastTrainingType === 'passing' ? " Those passing drills are showing!" : "";
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! Assisted by " + soldPlayer.name + "!" + assistNote, 'goal-event');
         playSound('coin');
       } else if (eventRoll < 0.5) {
         // Home team scores (not your player)
@@ -3259,6 +3834,818 @@ function renderOpponentCard() {
   }
 }
 
+// ═══════════════════════════════════════════════════════
+//  BE A PRO — PLAYER CAREER MODE
+// ═══════════════════════════════════════════════════════
+
+// ─── NAV REBUILD ──────────────────────────────────────────
+function rebuildNav(mode) {
+  var nav = document.getElementById("bottomNav");
+  if (mode === "player") {
+    nav.innerHTML = ''
+      + '<button class="nav-tab active" data-tab="hub" onclick="showTab(\'hub\')"><div>&#127968;</div><span>Hub</span></button>'
+      + '<button class="nav-tab" data-tab="train" onclick="showTab(\'train\')"><div>&#127947;</div><span>Train</span></button>'
+      + '<button class="nav-tab" data-tab="match" onclick="showTab(\'match\')"><div>&#9917;</div><span>Match</span></button>'
+      + '<button class="nav-tab" data-tab="offers" onclick="showTab(\'offers\')"><div>&#128233;</div><span>Offers</span></button>'
+      + '<button class="nav-tab" data-tab="stats" onclick="showTab(\'stats\')"><div>&#128202;</div><span>Stats</span></button>';
+  } else {
+    nav.innerHTML = ''
+      + '<button class="nav-tab active" data-tab="hub" onclick="showTab(\'hub\')"><div>&#127968;</div><span>Hub</span></button>'
+      + '<button class="nav-tab" data-tab="scout" onclick="showTab(\'scout\')"><div>&#128269;</div><span>Scout</span></button>'
+      + '<button class="nav-tab" data-tab="train" onclick="showTab(\'train\')"><div>&#127947;</div><span>Train</span></button>'
+      + '<button class="nav-tab" data-tab="sell" onclick="showTab(\'sell\')"><div>&#128188;</div><span>Sell</span></button>'
+      + '<button class="nav-tab" data-tab="squad" onclick="showTab(\'squad\')"><div>&#128203;</div><span>Squad</span></button>';
+  }
+}
+
+// ─── PRO SETUP SCREEN ────────────────────────────────────
+var proSetupState = { position: "FWD", nationality: "england" };
+
+function showProSetup() {
+  var html = '';
+  html += '<div style="font-size:48px;margin-bottom:8px;">&#9917;</div>';
+  html += '<div class="splash-title" style="font-size:28px;">BE A PRO</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin:8px 0 20px;text-align:center;">Create your footballer. Train, play, get scouted.</div>';
+
+  html += '<input class="splash-input" id="proFirstName" type="text" placeholder="First Name" maxlength="15" autocomplete="off" style="margin-bottom:8px;">';
+  html += '<input class="splash-input" id="proLastName" type="text" placeholder="Last Name" maxlength="15" autocomplete="off" style="margin-bottom:16px;">';
+
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;text-align:center;">POSITION</div>';
+  html += '<div class="pro-setup-pos" id="proPosBtns">';
+  ["GK","DEF","MID","FWD"].forEach(function(pos) {
+    html += '<button class="pos-btn' + (proSetupState.position === pos ? ' selected' : '') + '" onclick="selectProPos(\'' + pos + '\')">' + pos + '</button>';
+  });
+  html += '</div>';
+
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;text-align:center;">NATIONALITY</div>';
+  html += '<div class="pro-nat-grid" id="proNatBtns">';
+  NATIONALITIES.forEach(function(nat) {
+    html += '<button class="nat-btn' + (proSetupState.nationality === nat ? ' selected' : '') + '" onclick="selectProNat(\'' + nat + '\')">' + NAMES[nat].flag + '</button>';
+  });
+  html += '</div>';
+
+  html += '<button class="btn btn-gold" style="max-width:320px;margin-top:16px;" onclick="startProCareer()">START CAREER</button>';
+  html += '<button class="btn btn-outline" style="max-width:320px;margin-top:8px;" onclick="hideLobby()">\u2190 BACK</button>';
+
+  showLobbyScreen(html);
+}
+
+function selectProPos(pos) {
+  proSetupState.position = pos;
+  document.querySelectorAll('#proPosBtns .pos-btn').forEach(function(b) {
+    b.classList.toggle('selected', b.textContent === pos);
+  });
+}
+
+function selectProNat(nat) {
+  proSetupState.nationality = nat;
+  document.querySelectorAll('#proNatBtns .nat-btn').forEach(function(b, i) {
+    b.classList.toggle('selected', NATIONALITIES[i] === nat);
+  });
+}
+
+// ─── START PRO CAREER ───────────────────────────────────
+function startProCareer() {
+  var first = (document.getElementById("proFirstName") || {}).value;
+  var last = (document.getElementById("proLastName") || {}).value;
+  first = (first || '').trim() || "Marcus";
+  last = (last || '').trim() || "Sterling";
+  var nat = proSetupState.nationality;
+  var pos = proSetupState.position;
+
+  var tier4Clubs = CLUBS.filter(function(c) { return c.tier === 4; });
+  var startClub = pick(tier4Clubs);
+
+  state.careerMode = "player";
+  state.season = 1;
+  state.pro = {
+    firstName: first,
+    lastName: last,
+    nationality: nat,
+    flag: NAMES[nat].flag,
+    age: 16,
+    rating: 45,
+    potentialRating: rand(85, 95),
+    position: pos,
+    skills: { shooting: 40, passing: 40, dribbling: 40 },
+    club: { name: startClub.name, emoji: startClub.emoji, tier: startClub.tier },
+    salary: 50000,
+    goals: 0,
+    assists: 0,
+    apps: 0,
+    seasonGoals: 0,
+    seasonAssists: 0,
+    trophies: 0,
+    matchPlayed: false,
+    trained: { shooting: false, passing: false, dribbling: false },
+    offers: [],
+    history: [],
+    avatarUrl: null
+  };
+  // Generate avatar
+  state.pro.avatarUrl = generateAvatarUrl(state.pro);
+
+  hideLobby();
+  document.getElementById("splashScreen").classList.add("hidden");
+  document.getElementById("app").style.display = "flex";
+  rebuildNav("player");
+  updateTopBar();
+  saveGame();
+  startAutoSave();
+
+  showSeasonTransition(1, function() {
+    showTab("hub");
+  });
+}
+
+// ─── PRO HUB ────────────────────────────────────────────
+function renderProHub() {
+  var p = state.pro;
+  if (!p) return '<div class="empty-state"><div class="msg">No player data found.</div></div>';
+
+  var html = '';
+
+  // Player card
+  html += '<div class="pro-card">';
+  html += '<img src="' + ensureAvatar(p) + '" style="width:72px;height:72px;border-radius:16px;margin-bottom:8px;" alt="">';
+  html += '<div class="pro-name">' + p.flag + ' ' + p.firstName + ' ' + p.lastName + '</div>';
+  html += '<div class="pro-rating">' + p.rating + '</div>';
+  html += '<div class="pro-pos-badge">' + p.position + '</div>';
+  html += '<div class="pro-club">' + p.club.emoji + ' ' + p.club.name + ' (Tier ' + p.club.tier + ')</div>';
+  html += '<div style="margin-top:12px;text-align:left;">';
+  html += proSkillBar("Shooting", p.skills.shooting, "#ff3b5c");
+  html += proSkillBar("Passing", p.skills.passing, "#00d4ff");
+  html += proSkillBar("Dribbling", p.skills.dribbling, "#00ff88");
+  html += '</div>';
+  html += '<div style="font-size:13px;color:var(--muted);margin-top:8px;">Salary: <span class="money">' + fmt(p.salary) + '</span> /season</div>';
+  html += '</div>';
+
+  // Season checklist
+  var allTrained = p.trained.shooting && p.trained.passing && p.trained.dribbling;
+  html += '<div class="checklist-card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">SEASON ' + state.season + ' CHECKLIST</div>';
+  html += '<div class="checklist-item ' + (allTrained ? 'done' : 'pending') + '">';
+  html += (allTrained ? '\u2705' : '\u2610') + ' Train skills</div>';
+  html += '<div class="checklist-item ' + (p.matchPlayed ? 'done' : 'pending') + '">';
+  html += (p.matchPlayed ? '\u2705' : '\u2610') + ' Play match</div>';
+  html += '<div class="checklist-item ' + (p.offers.length > 0 ? 'done' : 'pending') + '">';
+  html += (p.offers.length > 0 ? '\u2705' : '\u2610') + ' Review offers</div>';
+  html += '</div>';
+
+  // End season
+  html += '<button class="btn btn-gold btn-pulse" onclick="endProSeason()" style="margin-top:8px;">END SEASON \u27A1\uFE0F</button>';
+
+  // Save management
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+  html += '<button class="btn btn-outline" style="flex:1;font-size:12px;padding:8px;" onclick="exportSave()">\u{1F4E4} Export</button>';
+  html += '<button class="btn btn-outline" style="flex:1;font-size:12px;padding:8px;" onclick="promptImportSave()">\u{1F4E5} Import</button>';
+  html += '</div>';
+
+  return html;
+}
+
+function proSkillBar(label, value, color) {
+  return '<div class="pro-skill-bar">'
+    + '<span class="skill-label">' + label + '</span>'
+    + '<div class="skill-track"><div class="skill-fill" style="width:' + value + '%;background:' + color + ';"></div></div>'
+    + '<span class="skill-val">' + value + '</span>'
+    + '</div>';
+}
+
+// ─── PRO TRAIN ──────────────────────────────────────────
+function renderProTrain() {
+  var p = state.pro;
+  if (!p) return '';
+
+  var html = '<div class="section-title">TRAINING GROUND</div>';
+  html += '<div class="section-subtitle">Train each skill once per season. Training is free!</div>';
+
+  var drills = [
+    { key: "shooting", label: "\u{1F3AF} Shooting Practice", desc: "Tap to shoot! Score goals for skill boost", game: "shooting", color: "#ff3b5c" },
+    { key: "passing", label: "\u26BD Passing Drill", desc: "Tap targets! Speed increases over time", game: "passing", color: "#00d4ff" },
+    { key: "dribbling", label: "\u{1F3C3} Dribble Run", desc: "Dodge cones! Best boost potential", game: "dribble", color: "#00ff88" }
+  ];
+
+  drills.forEach(function(d) {
+    var done = p.trained[d.key];
+    html += '<div class="card' + (done ? '' : ' card-glow') + '" style="' + (done ? 'opacity:0.5;' : 'cursor:pointer;') + '"' + (done ? '' : ' onclick="launchProMiniGame(\'' + d.game + '\')"') + '>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+    html += '<div><div style="font-weight:700;">' + d.label + '</div>';
+    html += '<div style="font-size:12px;color:var(--muted);">' + d.desc + '</div></div>';
+    html += '<div style="text-align:right;">';
+    if (done) {
+      html += '<div style="font-size:13px;color:var(--green);">\u2705 Done</div>';
+    } else {
+      html += '<div style="font-size:13px;color:var(--gold);">FREE</div>';
+    }
+    html += '</div></div>';
+    html += '</div>';
+  });
+
+  // Current skills display
+  html += '<div class="card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">CURRENT SKILLS</div>';
+  html += proSkillBar("Shooting", p.skills.shooting, "#ff3b5c");
+  html += proSkillBar("Passing", p.skills.passing, "#00d4ff");
+  html += proSkillBar("Dribbling", p.skills.dribbling, "#00ff88");
+  html += '</div>';
+
+  return html;
+}
+
+function launchProMiniGame(gameType) {
+  var p = state.pro;
+  if (!p) return;
+
+  var skillKey = gameType === "dribble" ? "dribbling" : gameType;
+  if (p.trained[skillKey]) {
+    showToast("Already trained " + skillKey + " this season!", "info");
+    return;
+  }
+
+  // Create pseudo-player for the mini-game
+  var pseudoPlayer = {
+    id: -1,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    nationality: p.nationality,
+    flag: p.flag,
+    position: p.position,
+    rating: p.skills[skillKey],
+    potentialRating: 99,
+    mood: "happy",
+    seasonsNotTrained: 0,
+    avatarUrl: p.avatarUrl,
+    _currentGameType: gameType,
+    _isProMode: true,
+    _proSkillKey: skillKey
+  };
+
+  // Show training context
+  var context = getTrainingContext(pseudoPlayer, gameType);
+
+  var briefHtml = '<div style="text-align:center;padding:20px 16px;">';
+  briefHtml += '<div style="font-size:11px;color:var(--gold);letter-spacing:2px;font-family:\'Bebas Neue\',sans-serif;margin-bottom:8px;">TRAINING BRIEF</div>';
+  briefHtml += '<div style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;">' + context + '</div>';
+  briefHtml += '<button class="btn btn-primary btn-pulse" style="margin-top:16px;max-width:280px;" id="startProTrainBtn">\u26BD BEGIN TRAINING</button>';
+  briefHtml += '</div>';
+
+  openBottomSheet(briefHtml);
+
+  document.getElementById('startProTrainBtn').addEventListener('click', function() {
+    var html = '<div class="mini-game-container">';
+    html += '<div class="sheet-title">' + gameType.toUpperCase() + ' TRAINING</div>';
+    html += '<div class="mini-game-hud"><span id="mgScore">Score: 0</span><span id="mgTimer">Time: --</span></div>';
+    html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="mgTimerBar" style="width:100%"></div></div>';
+    html += '<canvas id="trainCanvas" width="340" height="400"></canvas>';
+    html += '</div>';
+
+    document.getElementById('sheetContent').innerHTML = html;
+
+    setTimeout(function() {
+      var canvas = document.getElementById('trainCanvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      if (gameType === 'shooting') miniGameShooting(canvas, ctx, pseudoPlayer);
+      else if (gameType === 'passing') miniGamePassing(canvas, ctx, pseudoPlayer);
+      else if (gameType === 'dribble') miniGameDribble(canvas, ctx, pseudoPlayer);
+    }, 100);
+  });
+}
+
+// Override applyTrainingResult to handle pro mode
+var _origApplyTrainingResult = applyTrainingResult;
+applyTrainingResult = function(player, score, maxScore) {
+  if (player._isProMode) {
+    var pct = maxScore > 0 ? (score / maxScore) : 0;
+    var skillKey = player._proSkillKey;
+    var gain = 0;
+    if (pct > 0.8) gain = rand(4, 7);
+    else if (pct > 0.5) gain = rand(2, 4);
+    else if (pct > 0.2) gain = rand(1, 2);
+
+    var oldVal = state.pro.skills[skillKey];
+    state.pro.skills[skillKey] = clamp(oldVal + gain, 0, 99);
+    state.pro.trained[skillKey] = true;
+
+    // Recalc overall
+    state.pro.rating = Math.round((state.pro.skills.shooting + state.pro.skills.passing + state.pro.skills.dribbling) / 3);
+    state.pro.rating = Math.min(state.pro.rating, state.pro.potentialRating);
+
+    var resultHTML = '<div class="mini-game-result">';
+    resultHTML += '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">TRAINING COMPLETE</div>';
+    resultHTML += '<div class="score-big">' + Math.round(pct * 100) + '%</div>';
+    resultHTML += '<div style="font-size:16px;margin:8px 0;">' + skillKey.charAt(0).toUpperCase() + skillKey.slice(1) + '</div>';
+    if (gain > 0) {
+      resultHTML += '<div style="font-size:24px;color:var(--green);font-weight:700;">+' + (state.pro.skills[skillKey] - oldVal) + ' ' + skillKey.toUpperCase() + '!</div>';
+      resultHTML += '<div style="font-size:14px;color:var(--muted);">' + oldVal + ' \u2192 ' + state.pro.skills[skillKey] + '</div>';
+    } else {
+      resultHTML += '<div style="font-size:16px;color:var(--muted);">No improvement this time</div>';
+    }
+    resultHTML += '<button class="btn btn-primary" style="margin-top:16px;" onclick="closeBottomSheet();updateTopBar();renderCurrentTab();">DONE</button>';
+    resultHTML += '</div>';
+
+    document.getElementById('sheetContent').innerHTML = resultHTML;
+
+    if (gain > 0) {
+      showToast("\u{1F4AA} " + skillKey + " +" + (state.pro.skills[skillKey] - oldVal) + "!", "success");
+      playSound('train');
+    } else {
+      showToast("Training done, no improvement.", "info");
+      playSound('train');
+    }
+    saveGame();
+    return;
+  }
+  _origApplyTrainingResult(player, score, maxScore);
+};
+
+// ─── PRO MATCH ──────────────────────────────────────────
+function renderProMatch() {
+  var p = state.pro;
+  if (!p) return '';
+
+  var html = '<div class="section-title">MATCH DAY</div>';
+
+  if (p.matchPlayed) {
+    html += '<div class="card" style="text-align:center;">';
+    html += '<div style="font-size:14px;color:var(--green);font-weight:700;">\u2705 Match played this season!</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Season stats: ' + p.seasonGoals + ' goals, ' + p.seasonAssists + ' assists</div>';
+    html += '</div>';
+  } else {
+    var opponent = pick(CLUBS.filter(function(c) { return c.name !== p.club.name; }));
+    html += '<div class="card card-glow" style="text-align:center;">';
+    html += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">UPCOMING FIXTURE</div>';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;">' + p.club.emoji + ' ' + p.club.name + '</div>';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--muted);margin:4px 0;">vs</div>';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;">' + opponent.emoji + ' ' + opponent.name + '</div>';
+    html += '<button class="btn btn-green btn-pulse" style="margin-top:16px;" onclick="playProMatch()">PLAY MATCH</button>';
+    html += '</div>';
+  }
+
+  // Season performance
+  html += '<div class="card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">SEASON PERFORMANCE</div>';
+  html += '<div style="display:flex;justify-content:space-around;text-align:center;">';
+  html += '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;">' + p.seasonGoals + '</div><div style="font-size:11px;color:var(--muted);">Goals</div></div>';
+  html += '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;">' + p.seasonAssists + '</div><div style="font-size:11px;color:var(--muted);">Assists</div></div>';
+  html += '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;">' + p.apps + '</div><div style="font-size:11px;color:var(--muted);">Apps</div></div>';
+  html += '</div></div>';
+
+  return html;
+}
+
+function playProMatch() {
+  var p = state.pro;
+  if (!p || p.matchPlayed) return;
+
+  var opponent = pick(CLUBS.filter(function(c) { return c.name !== p.club.name; }));
+
+  // Create soldPlayer-like object for match sim
+  var sp = {
+    name: p.firstName + ' ' + p.lastName,
+    club: p.club.name,
+    rating: p.rating,
+    lastTrainingType: null
+  };
+
+  var html = '<div class="mini-game-container">';
+  html += '<div class="match-scoreboard" id="matchScore">' + sp.club + ' 0 - 0 ' + opponent.name + '</div>';
+  html += '<canvas id="matchCanvas" width="340" height="300"></canvas>';
+  html += '<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:4px;" id="matchMinute">0\'</div>';
+  html += '<div class="mini-game-timer"><div class="mini-game-timer-fill" id="matchTimerBar" style="width:0%"></div></div>';
+  html += '<div class="match-commentary" id="matchComm"></div>';
+  html += '</div>';
+
+  openBottomSheet(html);
+
+  setTimeout(function() {
+    var canvas = document.getElementById('matchCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    runProMatchSimulation(canvas, ctx, sp, opponent);
+  }, 200);
+}
+
+function runProMatchSimulation(canvas, ctx, sp, opponent) {
+  var w = canvas.width, h = canvas.height;
+  var minute = 0, homeScore = 0, awayScore = 0;
+  var events = [];
+  var ballX = w / 2, ballY = h / 2;
+  var homeColor = CLUB_COLORS[sp.club] || '#00d4ff';
+  var awayColor = CLUB_COLORS[opponent.name] || '#ff3b5c';
+
+  var homePlayers = [], awayPlayers = [];
+  for (var i = 0; i < 11; i++) {
+    homePlayers.push({ x: rand(30, w - 30), y: rand(h / 2 + 20, h - 30), baseX: 0, baseY: 0 });
+    awayPlayers.push({ x: rand(30, w - 30), y: rand(30, h / 2 - 20), baseX: 0, baseY: 0 });
+  }
+  homePlayers.forEach(function(pl) { pl.baseX = pl.x; pl.baseY = pl.y; });
+  awayPlayers.forEach(function(pl) { pl.baseX = pl.x; pl.baseY = pl.y; });
+
+  var starIdx = 0;
+  var lastEventMin = -5;
+  var matchOver = false;
+  var yourGoals = 0, yourAssists = 0;
+
+  function addCommentary(text, cls) {
+    events.push({ text: text, cls: cls || '' });
+    var comm = document.getElementById('matchComm');
+    if (comm) {
+      var div = document.createElement('div');
+      div.className = cls || '';
+      div.textContent = text;
+      comm.appendChild(div);
+      comm.scrollTop = comm.scrollHeight;
+    }
+  }
+
+  function draw() {
+    drawPitch(ctx, w, h);
+    homePlayers.forEach(function(pl, i) {
+      ctx.beginPath();
+      ctx.arc(pl.x, pl.y, i === starIdx ? 8 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = homeColor;
+      ctx.fill();
+      if (i === starIdx) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.stroke(); }
+    });
+    awayPlayers.forEach(function(pl) {
+      ctx.beginPath();
+      ctx.arc(pl.x, pl.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = awayColor;
+      ctx.fill();
+    });
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  }
+
+  function update() {
+    if (matchOver) return;
+    minute += 0.3;
+
+    homePlayers.forEach(function(pl) {
+      pl.x = pl.baseX + Math.sin(Date.now() / 1000 + pl.baseX) * 20;
+      pl.y = pl.baseY + Math.cos(Date.now() / 800 + pl.baseY) * 15;
+    });
+    awayPlayers.forEach(function(pl) {
+      pl.x = pl.baseX + Math.sin(Date.now() / 900 + pl.baseX) * 20;
+      pl.y = pl.baseY + Math.cos(Date.now() / 1100 + pl.baseY) * 15;
+    });
+
+    var target = Math.random() > 0.5 ? pick(homePlayers) : pick(awayPlayers);
+    ballX += (target.x - ballX) * 0.1;
+    ballY += (target.y - ballY) * 0.1;
+
+    if (minute - lastEventMin > 8 && Math.random() < 0.15) {
+      lastEventMin = Math.floor(minute);
+      var roll = Math.random();
+      var bonus = sp.rating / 100;
+
+      if (roll < 0.25 * bonus) {
+        homeScore++; yourGoals++;
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! " + sp.name + " scores!", 'goal-event');
+        playSound('sell');
+      } else if (roll < 0.35) {
+        homeScore++; yourAssists++;
+        addCommentary(Math.floor(minute) + "' \u26BD GOAL! Assisted by " + sp.name + "!", 'goal-event');
+        playSound('coin');
+      } else if (roll < 0.5) {
+        homeScore++;
+        addCommentary(Math.floor(minute) + "' \u26BD " + sp.club + " score!", 'goal-event');
+      } else if (roll < 0.65) {
+        awayScore++;
+        addCommentary(Math.floor(minute) + "' \u26BD " + opponent.name + " score!", 'goal-event');
+      } else if (roll < 0.75) {
+        addCommentary(Math.floor(minute) + "' \u{1F7E8} Yellow card shown", 'card-event');
+      } else {
+        addCommentary(Math.floor(minute) + "' Good chance but saved!", '');
+      }
+    }
+
+    document.getElementById('matchScore').textContent = sp.club + ' ' + homeScore + ' - ' + awayScore + ' ' + opponent.name;
+    document.getElementById('matchMinute').textContent = Math.floor(Math.min(minute, 90)) + "'";
+    document.getElementById('matchTimerBar').style.width = (Math.min(minute, 90) / 90 * 100) + '%';
+
+    draw();
+
+    if (minute >= 90) {
+      matchOver = true;
+      addCommentary("90' Full time! " + sp.club + " " + homeScore + " - " + awayScore + " " + opponent.name, '');
+      setTimeout(function() {
+        finishProMatch(sp, opponent, homeScore, awayScore, yourGoals, yourAssists);
+      }, 1000);
+      return;
+    }
+    activeGame = requestAnimationFrame(update);
+  }
+
+  addCommentary("Kick off! " + sp.club + " vs " + opponent.name, '');
+  addCommentary(sp.name + " (" + sp.rating + " rated) is in the starting lineup!", '');
+  activeGame = requestAnimationFrame(update);
+}
+
+function finishProMatch(sp, opponent, homeScore, awayScore, goals, assists) {
+  var p = state.pro;
+  p.matchPlayed = true;
+  p.goals += goals;
+  p.assists += assists;
+  p.apps += 1;
+  p.seasonGoals += goals;
+  p.seasonAssists += assists;
+
+  var win = homeScore > awayScore;
+  if (win && Math.random() < 0.15) p.trophies++;
+
+  var isMOTM = goals >= 2 || (goals >= 1 && assists >= 1);
+
+  var resultHTML = '<div class="mini-game-result">';
+  resultHTML += '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">FULL TIME</div>';
+  resultHTML += '<div class="match-scoreboard">' + sp.club + ' ' + homeScore + ' - ' + awayScore + ' ' + opponent.name + '</div>';
+  resultHTML += '<div style="margin:16px 0;">';
+  resultHTML += '<div style="font-weight:700;font-size:16px;margin-bottom:8px;">YOUR Performance</div>';
+  if (goals > 0) resultHTML += '<div style="color:var(--green);">\u26BD Goals: ' + goals + '</div>';
+  if (assists > 0) resultHTML += '<div style="color:var(--accent);">\u{1F3AF} Assists: ' + assists + '</div>';
+  if (isMOTM) resultHTML += '<div style="color:var(--gold);font-weight:700;margin-top:8px;">\u{1F31F} MAN OF THE MATCH!</div>';
+  if (goals === 0 && assists === 0) resultHTML += '<div style="color:var(--muted);">Quiet game, but gained experience</div>';
+  resultHTML += '</div>';
+  resultHTML += '<button class="btn btn-primary" style="margin-top:16px;" onclick="closeBottomSheet();updateTopBar();renderCurrentTab();">DONE</button>';
+  resultHTML += '</div>';
+
+  document.getElementById('sheetContent').innerHTML = resultHTML;
+
+  if (isMOTM) {
+    showToast("\u{1F31F} Man of the Match!", "success");
+    confettiBurst();
+  }
+  saveGame();
+}
+
+// ─── PRO OFFERS ─────────────────────────────────────────
+function renderProOffers() {
+  var p = state.pro;
+  if (!p) return '';
+
+  var html = '<div class="section-title">CONTRACT OFFERS</div>';
+
+  if (!p.offers || p.offers.length === 0) {
+    html += '<div class="empty-state"><div class="icon">\u{1F4E9}</div><div class="msg">No offers this season. Keep training and improving!</div></div>';
+    html += '<div class="card">';
+    html += '<div style="font-size:13px;color:var(--muted);">Current Club: ' + p.club.emoji + ' ' + p.club.name + ' (Tier ' + p.club.tier + ')</div>';
+    html += '<div style="font-size:13px;color:var(--muted);margin-top:4px;">Salary: <span class="money">' + fmt(p.salary) + '</span></div>';
+    html += '</div>';
+    return html;
+  }
+
+  html += '<div class="section-subtitle">Your rating (' + p.rating + ') attracted interest!</div>';
+
+  p.offers.forEach(function(offer, idx) {
+    html += '<div class="pro-offer-card">';
+    html += '<div class="club-name">' + offer.emoji + ' ' + offer.name + '</div>';
+    html += '<div style="font-size:13px;color:var(--muted);">Tier ' + offer.tier + ' club</div>';
+    html += '<div class="salary">' + fmt(offer.salary) + ' /season</div>';
+    html += '<div style="font-size:12px;color:var(--muted);">Contract: ' + offer.length + ' seasons</div>';
+    html += '<div class="btn-row">';
+    html += '<button class="btn btn-green btn-small" onclick="acceptProOffer(' + idx + ')">\u2705 ACCEPT</button>';
+    html += '<button class="btn btn-outline btn-small" onclick="rejectProOffer(' + idx + ')">\u274C DECLINE</button>';
+    html += '</div></div>';
+  });
+
+  html += '<div class="card" style="margin-top:8px;">';
+  html += '<div style="font-size:13px;color:var(--muted);">You can also stay at ' + p.club.emoji + ' ' + p.club.name + '</div>';
+  html += '</div>';
+
+  return html;
+}
+
+function generateProOffers() {
+  var p = state.pro;
+  if (!p) return;
+  p.offers = [];
+
+  if (state.season <= 1) return; // No offers in first season
+
+  var numOffers = 0;
+  if (p.rating >= 78) numOffers = rand(1, 3);
+  else if (p.rating >= 65) numOffers = rand(1, 2);
+  else if (p.rating >= 55) numOffers = rand(0, 2);
+  else numOffers = rand(0, 1);
+
+  for (var i = 0; i < numOffers; i++) {
+    var eligibleClubs;
+    if (p.rating >= 78) {
+      eligibleClubs = CLUBS.filter(function(c) { return c.tier <= 2 && c.name !== p.club.name; });
+    } else if (p.rating >= 65) {
+      eligibleClubs = CLUBS.filter(function(c) { return c.tier >= 2 && c.tier <= 3 && c.name !== p.club.name; });
+    } else {
+      eligibleClubs = CLUBS.filter(function(c) { return c.tier >= 3 && c.name !== p.club.name; });
+    }
+    if (eligibleClubs.length === 0) continue;
+
+    var club = pick(eligibleClubs);
+    var salaryBase = p.rating * p.rating * 20;
+    var salary = Math.round(salaryBase * (0.8 + Math.random() * 0.4) / 1000) * 1000;
+    salary = Math.max(salary, p.salary);
+
+    p.offers.push({
+      name: club.name,
+      emoji: club.emoji,
+      tier: club.tier,
+      salary: salary,
+      length: rand(2, 4)
+    });
+  }
+}
+
+function acceptProOffer(idx) {
+  var p = state.pro;
+  if (!p || !p.offers[idx]) return;
+  var offer = p.offers[idx];
+  p.club = { name: offer.name, emoji: offer.emoji, tier: offer.tier };
+  p.salary = offer.salary;
+  p.offers = [];
+  showToast("\u2705 Signed with " + offer.emoji + " " + offer.name + "!", "success");
+  playSound('sign');
+  confettiBurst();
+  updateTopBar();
+  renderCurrentTab();
+  saveGame();
+}
+
+function rejectProOffer(idx) {
+  var p = state.pro;
+  if (!p) return;
+  p.offers.splice(idx, 1);
+  showToast("Offer declined.", "info");
+  renderCurrentTab();
+  saveGame();
+}
+
+// ─── PRO STATS ──────────────────────────────────────────
+function renderProStats() {
+  var p = state.pro;
+  if (!p) return '';
+
+  var html = '<div class="section-title">CAREER STATISTICS</div>';
+
+  // Career totals
+  html += '<div class="card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">CAREER TOTALS</div>';
+  html += '<div class="end-stat"><span class="label">Appearances</span><span class="value">' + p.apps + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Goals</span><span class="value green">' + p.goals + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Assists</span><span class="value green">' + p.assists + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Goal Contributions</span><span class="value gold">' + (p.goals + p.assists) + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Trophies</span><span class="value gold">' + p.trophies + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Overall Rating</span><span class="value">' + p.rating + ' / ' + p.potentialRating + '</span></div>';
+  html += '</div>';
+
+  // Season history
+  if (p.history && p.history.length > 0) {
+    html += '<div class="card">';
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">SEASON HISTORY</div>';
+    html += '<table class="pro-history-table">';
+    html += '<tr><th>S</th><th>Club</th><th>G</th><th>A</th><th>Rtg</th></tr>';
+    p.history.forEach(function(h) {
+      html += '<tr><td>' + h.season + '</td><td>' + h.club + '</td><td>' + h.goals + '</td><td>' + h.assists + '</td><td>' + h.rating + '</td></tr>';
+    });
+    html += '</table></div>';
+  }
+
+  // Clubs played for
+  var clubs = [p.club.emoji + ' ' + p.club.name];
+  if (p.history) {
+    p.history.forEach(function(h) {
+      if (clubs.indexOf(h.clubFull) === -1) clubs.push(h.clubFull);
+    });
+  }
+  html += '<div class="card">';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">CLUBS</div>';
+  clubs.forEach(function(c) {
+    html += '<div style="font-size:14px;padding:4px 0;">' + c + '</div>';
+  });
+  html += '</div>';
+
+  return html;
+}
+
+// ─── PRO SEASON FLOW ────────────────────────────────────
+function endProSeason() {
+  var p = state.pro;
+  if (!p) return;
+
+  // Record season in history
+  p.history = p.history || [];
+  p.history.push({
+    season: state.season,
+    club: p.club.name,
+    clubFull: p.club.emoji + ' ' + p.club.name,
+    goals: p.seasonGoals,
+    assists: p.seasonAssists,
+    rating: p.rating
+  });
+
+  // Recalc overall rating from skills
+  p.rating = Math.round((p.skills.shooting + p.skills.passing + p.skills.dribbling) / 3);
+  p.rating = Math.min(p.rating, p.potentialRating);
+
+  // Age up
+  p.age++;
+
+  // Decline for older players
+  if (p.age >= 30) {
+    p.skills.shooting = Math.max(30, p.skills.shooting - 1);
+    p.skills.passing = Math.max(30, p.skills.passing - 1);
+    p.skills.dribbling = Math.max(30, p.skills.dribbling - 1);
+  }
+  if (p.age >= 33) {
+    p.skills.shooting = Math.max(25, p.skills.shooting - 2);
+    p.skills.passing = Math.max(25, p.skills.passing - 2);
+    p.skills.dribbling = Math.max(25, p.skills.dribbling - 2);
+  }
+
+  // Recalc after decline
+  p.rating = Math.round((p.skills.shooting + p.skills.passing + p.skills.dribbling) / 3);
+  p.rating = Math.min(p.rating, p.potentialRating);
+
+  // Check retirement
+  if (p.age >= 34) {
+    saveGame();
+    showProRetirement();
+    return;
+  }
+
+  // Advance season
+  state.season++;
+  p.seasonGoals = 0;
+  p.seasonAssists = 0;
+  p.matchPlayed = false;
+  p.trained = { shooting: false, passing: false, dribbling: false };
+
+  // Generate offers for new season
+  generateProOffers();
+
+  saveGame();
+
+  showSeasonTransition(state.season, function() {
+    updateTopBar();
+    showTab("hub");
+  });
+}
+
+function showProRetirement() {
+  var p = state.pro;
+  var screen = document.getElementById("finalScreen");
+  var grade, gradeClass, tagline;
+
+  if (p.goals >= 200) { grade = "LEGEND"; gradeClass = "grade-S-plus"; tagline = "One of the greatest to ever play the game."; }
+  else if (p.goals >= 100) { grade = "WORLD CLASS"; gradeClass = "grade-S"; tagline = "A career that will be remembered for generations."; }
+  else if (p.goals >= 50) { grade = "GOOD"; gradeClass = "grade-A"; tagline = "A solid professional career with plenty of highlights."; }
+  else if (p.goals >= 20) { grade = "AVERAGE"; gradeClass = "grade-B"; tagline = "A decent career, but could have achieved more."; }
+  else { grade = "FLOP"; gradeClass = "grade-D"; tagline = "Not quite cut out for the beautiful game."; }
+
+  var html = '';
+  html += '<div style="font-size:14px;color:var(--muted);letter-spacing:4px;margin-bottom:4px;">CAREER OVER</div>';
+  html += '<div style="width:80px;height:2px;background:var(--gold);margin:8px auto 16px;"></div>';
+
+  html += '<div class="grade-display ' + gradeClass + '">' + grade + '</div>';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--accent);">' + p.firstName + ' ' + p.lastName + '</div>';
+  html += '<div class="final-tagline">"' + tagline + '"</div>';
+
+  html += '<div class="card" style="width:100%;max-width:350px;">';
+  html += '<div class="end-stat"><span class="label">Retired Age</span><span class="value">' + p.age + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Appearances</span><span class="value">' + p.apps + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Goals</span><span class="value green">' + p.goals + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Assists</span><span class="value green">' + p.assists + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Goal Contributions</span><span class="value gold">' + (p.goals + p.assists) + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Trophies</span><span class="value gold">' + p.trophies + '</span></div>';
+  html += '<div class="end-stat"><span class="label">Peak Rating</span><span class="value">' + p.potentialRating + '</span></div>';
+  html += '</div>';
+
+  // Clubs list
+  var clubs = [];
+  if (p.history) {
+    p.history.forEach(function(h) {
+      if (clubs.indexOf(h.clubFull) === -1) clubs.push(h.clubFull);
+    });
+  }
+  if (clubs.length > 0) {
+    html += '<div class="card" style="width:100%;max-width:350px;">';
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">CLUBS PLAYED FOR</div>';
+    clubs.forEach(function(c) {
+      html += '<div style="font-size:14px;padding:3px 0;">' + c + '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<button class="btn btn-primary" style="margin-top:16px;max-width:350px;" onclick="resetGame()">\u{1F504} PLAY AGAIN</button>';
+
+  screen.innerHTML = html;
+  screen.classList.add("show");
+  confettiBurst();
+  deleteSave();
+}
+
 // ─── GAME INIT ─────────────────────────────────────────
 function selectDifficulty(diff, el) {
   document.querySelectorAll(".diff-btn").forEach(function(b) { b.classList.remove("selected"); });
@@ -3301,27 +4688,42 @@ function startGame() {
   updateTopBar();
 
   saveGame();
+  startAutoSave();
 
   showSeasonTransition(1, function() {
     showTab("hub");
   });
 }
 
-// FIX #3: Continue from save
+// Continue from save (tries localStorage, then IndexedDB fallback)
 function continueGame() {
-  if (!loadGame()) return;
+  if (loadGame()) {
+    showGameAfterLoad();
+    return;
+  }
+  // Async fallback: try IndexedDB
+  loadGameAsync(function(ok) {
+    if (ok) showGameAfterLoad();
+    else showToast("No save found!", "error");
+  });
+}
 
+function showGameAfterLoad() {
   document.getElementById("splashScreen").classList.add("hidden");
   document.getElementById("app").style.display = "flex";
+  if (state.careerMode === "player") {
+    rebuildNav("player");
+  } else {
+    rebuildNav("agent");
+  }
   updateTopBar();
-
-  // Update mute button state
   document.getElementById("muteBtn").innerHTML = state.soundMuted ? "&#128263;" : "&#128266;";
-
+  startAutoSave();
   showTab(state.currentTab || "hub");
 }
 
 function resetGame() {
+  stopAutoSave();
   stopMultiplayerListeners();
   state.gameMode = "solo";
   state.matchId = null;
@@ -3346,17 +4748,26 @@ function resetGame() {
   state.dealsThisSeason = false;
   state.soldPlayers = [];
   state.johnPedroSeen = false;
+  state.careerMode = "agent";
+  state.pro = null;
   deleteSave();
   checkContinueButton();
+  // Restore agent nav
+  rebuildNav("agent");
 }
 
-// FIX #3: Show/hide continue button on splash based on save existence
+// Show/hide continue button on splash based on save existence
 function checkContinueButton() {
   var btn = document.getElementById("continueBtn");
+  // Sync check (localStorage)
   if (hasSave()) {
     btn.style.display = "block";
   } else {
     btn.style.display = "none";
+    // Async fallback check (IndexedDB) — may reveal save that localStorage lost
+    hasSaveAsync(function(found) {
+      if (found) btn.style.display = "block";
+    });
   }
   // Check for multiplayer reconnect
   var rcBtn = document.getElementById("reconnectBtn");
@@ -3366,8 +4777,10 @@ function checkContinueButton() {
   }
 }
 
-// On page load, check for existing save
-checkContinueButton();
+// On page load, init IndexedDB then check for saves
+initIndexedDB(function() {
+  checkContinueButton();
+});
 </script>
 </body>
 </html>
